@@ -1,1 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Diez Cosas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
+  <div class="app">
+
+    <h1>🎲 Diez Cosas</h1>
+
+    <div class="controls">
+      <label class="adulto">
+        <input type="checkbox" id="modoAdulto">
+        Modo Adulto 🔥 (+18)
+      </label>
+
+      <button id="btnIniciar">Iniciar ronda</button>
+    </div>
+
+    <!-- Estado del juego -->
+    <div id="estado" class="estado">
+      Listos para jugar
+    </div>
+
+    <!-- Timer -->
+    <div id="timer" class="timer hidden">
+      60
+    </div>
+
+    <!-- Mensaje final -->
+    <div id="final" class="final hidden">
+      ¡Tiempo! Comparen respuestas 😄
+      <br><br>
+      <button id="btnReiniciar">Otra ronda</button>
+    </div>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
