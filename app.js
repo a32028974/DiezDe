@@ -6,6 +6,7 @@
    - Dice "Repasamos..." y repite sin números + pausas ~1s
    - Luego arranca timer
 ========================= */
+let wakeLock = null;
 
 // ====== DATA (PEGAR ACÁ LAS 200 DESPUÉS) ======
 const consignas = [
@@ -135,6 +136,8 @@ const PAUSA_REPASO_MS = 1000;    // entre consignas sin números
 const modoAdulto = document.getElementById("modoAdulto");
 const btnIniciar = document.getElementById("btnIniciar");
 const btnReiniciar = document.getElementById("btnReiniciar");
+const btnRepetir = document.getElementById("btnRepetir");
+
 
 const estado = document.getElementById("estado");
 const timerEl = document.getElementById("timer");
@@ -153,6 +156,27 @@ let enEjecucion = false;
 // ====== helpers UI ======
 function show(el){ el.classList.remove("hidden"); }
 function hide(el){ el.classList.add("hidden"); }
+
+async function activarWakeLock(){
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => {
+        console.log('Wake Lock liberado');
+      });
+    }
+  } catch (err) {
+    console.log('Wake Lock no disponible:', err);
+  }
+}
+
+function liberarWakeLock(){
+  if (wakeLock) {
+    wakeLock.release();
+    wakeLock = null;
+  }
+}
+
 
 function shuffle(arr){
   const a = [...arr];
@@ -264,6 +288,21 @@ function iniciarTimer(segundos){
   }, 1000);
 }
 
+async function repetirConsignas(){
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+  }
+
+  await hablar("Repasamos…", { rate: 1, pitch: 1 });
+  await sleep(300);
+
+  for (let i = 0; i < ronda.length; i++){
+    await hablar(ronda[i].texto, { rate: 1.02, pitch: 1 });
+    await sleep(PAUSA_REPASO_MS);
+  }
+}
+
+
 // ====== FLUJO PRINCIPAL ======
 async function iniciarRonda(){
   if (enEjecucion) return; // evita doble click
@@ -346,6 +385,8 @@ function terminar(){
 // ====== EVENTOS ======
 btnIniciar.addEventListener("click", iniciarRonda);
 btnReiniciar.addEventListener("click", iniciarRonda);
+btnRepetir.addEventListener("click", repetirConsignas);
+
 
 // Init
 resetUI();
