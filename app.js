@@ -128,7 +128,7 @@ const consignas = [
 
 // ====== CONFIG ======
 const TIEMPO_ESCRITURA = 60;     // segundos
-const PAUSA_LECTURA_MS = 2000;   // entre consignas con números
+const PAUSA_LECTURA_MS = 1500;   // entre consignas con números
 const PAUSA_REPASO_MS = 1000;    // entre consignas sin números
 
 // ====== UI ======
@@ -259,7 +259,7 @@ function iniciarTimer(segundos){
     if (tiempo <= 0){
       clearInterval(timerId);
       timerId = null;
-      terminar();
+      ();
     }
   }, 1000);
 }
@@ -322,19 +322,26 @@ async function iniciarRonda(){
 }
 
 function terminar(){
-  // Oculta escritura + timer
   hide(vistaRespuesta);
   hide(timerEl);
+  hide(finalEl);
 
-  // Mostrar final
-  show(finalEl);
-  estado.textContent = "Tiempo terminado";
+  // volver a mostrar consignas para corregir
+  show(vistaLectura);
+  renderLectura(ronda);
 
-  // corta voz por las dudas
+  estado.textContent = "Tiempo terminado – corrigen respuestas";
+
+  // opcional: decir “Tiempo”
   if ("speechSynthesis" in window) {
     window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance("Tiempo");
+    u.lang = "es-AR";
+    u.rate = 1;
+    window.speechSynthesis.speak(u);
   }
 }
+
 
 // ====== EVENTOS ======
 btnIniciar.addEventListener("click", iniciarRonda);
