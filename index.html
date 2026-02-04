@@ -22,14 +22,28 @@
     </div>
 
     <!-- Estado del juego -->
-    <div id="estado" class="estado">
-      Listos para jugar
-    </div>
+<div id="estado" class="estado">Listos para jugar</div>
 
+    <!-- Vista LECTURA: acá SÍ se ven las consignas -->
+<div id="vistaLectura" class="panel hidden">
+  <h2>Escuchá y mirá 👀🔊</h2>
+  <ol id="listaConsignas" class="lista"></ol>
+  <div class="subtexto">
+    (Después se ocultan y hay que escribir de memoria)
+  </div>
+</div>
+
+
+    <!-- Vista RESPUESTA: acá NO se ven las consignas -->
+<div id="vistaRespuesta" class="panel hidden">
+  <h2>Ahora escriban de memoria ✍️</h2>
+  <div class="bloqueo">
+    🔒 Consignas ocultas
+  </div>
+
+  
     <!-- Timer -->
-    <div id="timer" class="timer hidden">
-      60
-    </div>
+<div id="timer" class="timer hidden">60</div>
 
     <!-- Mensaje final -->
     <div id="final" class="final hidden">
