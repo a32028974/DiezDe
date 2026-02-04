@@ -5,60 +5,86 @@ body{
   margin:0;
   padding:20px;
 }
-.app{max-width:900px;margin:0 auto;}
-h1{margin:0 0 10px;}
-.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:10px 0 16px;}
-button{padding:12px 16px;border:0;border-radius:10px;font-size:16px;cursor:pointer;}
-#btnIniciar{background:#22c55e;color:#0b1b10;}
-.btn-sec{background:#334155;color:#fff;}
-.estado{opacity:.9;margin:8px 0 14px;}
-.panel{background:#1b1b1b;border:1px solid #2a2a2a;border-radius:14px;padding:14px;margin:12px 0;}
-.lista{font-size:22px;line-height:1.5;margin:10px 0 0;}
-.subtexto{opacity:.7;margin-top:10px;font-size:14px;}
-.timer{font-size:64px;font-weight:800;text-align:center;margin:18px 0;}
-.final{font-size:26px;text-align:center;margin-top:18px;}
-.hidden{display:none;}
-.bloqueo{
-  background:#0f172a;
-  border:1px solid #334155;
-  padding:12px;
-  border-radius:12px;
-  margin:10px 0 12px;
-  font-weight:700;
+
+.app{
+  max-width:900px;
+  margin:0 auto;
 }
-.textarea{
-  width:100%;
+
+h1{
+  font-size:38px;
+  margin-bottom:10px;
+}
+
+.controls{
+  display:flex;
+  gap:14px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin-bottom:14px;
+}
+
+button{
+  padding:14px 18px;
+  border:0;
+  border-radius:12px;
   font-size:18px;
-  padding:12px;
-  border-radius:12px;
-  border:1px solid #333;
-  background:#0b0b0b;
+  cursor:pointer;
+}
+
+#btnIniciar{
+  background:#22c55e;
+  color:#052e16;
+}
+
+.btn-sec{
+  background:#334155;
   color:#fff;
+  margin-top:12px;
 }
 
-/* ===== MODO CELULAR ===== */
-@media (max-width: 600px) {
-
-  h1 {
-    font-size: 32px;
-  }
-
-  .lista {
-    font-size: 28px;
-    line-height: 1.6;
-  }
-
-  .timer {
-    font-size: 80px;
-  }
-
-  button {
-    font-size: 18px;
-    padding: 14px 18px;
-  }
-
-  .estado {
-    font-size: 18px;
-  }
+.estado{
+  margin:12px 0;
+  font-size:18px;
 }
 
+.panel{
+  background:#1b1b1b;
+  border:1px solid #2a2a2a;
+  border-radius:16px;
+  padding:16px;
+  margin-top:12px;
+}
+
+.lista{
+  font-size:26px;
+  line-height:1.6;
+  margin-top:10px;
+}
+
+.timer{
+  font-size:90px;
+  font-weight:800;
+  text-align:center;
+  margin-top:20px;
+}
+
+.bloqueo{
+  background:#020617;
+  border:1px solid #334155;
+  padding:16px;
+  border-radius:14px;
+  font-size:20px;
+  text-align:center;
+}
+
+.hidden{
+  display:none;
+}
+
+/* CELU */
+@media (max-width:600px){
+  h1{font-size:34px;}
+  .lista{font-size:30px;}
+  .timer{font-size:100px;}
+}
