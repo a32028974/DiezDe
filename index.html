@@ -13,12 +13,26 @@
   <h1>🎲 Diez DE</h1>
 
   <div class="controls">
-    <label>
-      <input type="checkbox" id="modoAdulto">
-      Modo Adulto 🔥 (+18)
-    </label>
+    <!-- Botón Adulto con PIN -->
+    <button id="btnAdulto" class="btn-sec" type="button" aria-pressed="false" title="Modo Adulto (con PIN)">
+      🔒 Adulto
+    </button>
 
-    <button id="btnIniciar">Iniciar ronda</button>
+    <!-- Fullscreen opcional -->
+    <button id="btnFullscreen" class="btn-sec btn-fs" type="button" title="Pantalla completa">
+      <span class="fs-ico" aria-hidden="true">
+        <!-- Icono estilo “dos flechas” (tipo tu imagen) -->
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
+          <path d="M14 4h6v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M20 4l-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M10 20H4v-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M4 20l7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </span>
+      Fullscreen
+    </button>
+
+    <button id="btnIniciar" type="button">Iniciar ronda</button>
   </div>
 
   <div id="estado" class="estado">Listos para jugar</div>
@@ -28,7 +42,7 @@
     <h2>Escuchá y mirá 👀🔊</h2>
     <ol id="listaConsignas" class="lista"></ol>
 
-    <button id="btnRepetir" class="btn-sec">
+    <button id="btnRepetir" class="btn-sec" type="button">
       🔁 Repetir consignas
     </button>
   </div>
@@ -40,11 +54,11 @@
   </div>
 
   <!-- TIMER -->
-  <div id="timer" class="timer hidden">80</div>
+  <div id="timer" class="timer hidden">90</div>
 
-</div>
-
-  <script src="app.js"></script>
+  <button id="btnTerminar" class="btn-sec hidden" type="button">
+    ⏹️ Terminar ahora
+  </button>
 
   <!-- Footer FrecWD (chiquito) -->
   <footer class="frecwd-footer" aria-label="FrecWD">
@@ -53,29 +67,8 @@
     </a>
   </footer>
 
-  <style>
-    .frecwd-footer{
-      text-align:center;
-      margin-top:16px;
-      padding-top:12px;
-      opacity:.8;
-      border-top:1px solid rgba(255,255,255,.08);
-      font-size:13px;
-    }
-    .frecwd-link{
-      color:#94a3b8;
-      text-decoration:none;
-      font-weight:600;
-      letter-spacing:.2px;
-    }
-    .frecwd-link:active,
-    .frecwd-link:hover{
-      opacity:1;
-      text-decoration:underline;
-    }
-  </style>
-</body>
-</html>
+</div>
 
+<script src="app.js"></script>
 </body>
 </html>
