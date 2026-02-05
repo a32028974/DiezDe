@@ -16,7 +16,7 @@ const PAUSA_REPASO_MS = 700;
 const ADULTO_PIN = "1971";
 
 // ✅ Pegá acá tu WebApp URL del Apps Script (la generamos más abajo)
-const SUGERENCIAS_API_URL = "PEGAR_ACA_TU_URL_DE_WEBAPP";
+const SUGERENCIAS_API_URL = "https://script.google.com/macros/s/AKfycbwrm--Dd82Ee06aiQgkKEn3GEd_c292xkwk6B5VMjgFmxnYcQqQDk9FSNuFRX97iWkE0Q/exec";
 
 // ====== DATA base (consignas.js) ======
 let CONSIGNAS_GENERALES = Array.isArray(window.CONSIGNAS_GENERALES) ? window.CONSIGNAS_GENERALES : [];
