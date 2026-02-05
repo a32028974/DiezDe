@@ -1,22 +1,20 @@
 /* ==========================
-   DIEZ DE - app.js (COMPLETO)
+   DIEZ DE - app.js (FINAL)
    - PIN Adulto + 1 adulta por ronda
-   - Música espera ON/OFF (local mp3)
+   - Música espera ON/OFF + fade + recuerda estado
    - Fullscreen opcional
-   - Sugerencias -> Apps Script
-   - Carga consignas aprobadas desde Apps Script (sin editar arrays)
+   - Terminar ahora
+   - Sugerencias + aprobadas por JSONP (sin CORS)
 ========================== */
 
 // ====== CONFIG ======
-const TIEMPO_ESCRITURA = 90;
-const PAUSA_LECTURA_MS = 900;
-const PAUSA_REPASO_MS = 700;
-
-// PIN modo adulto (cambiá acá)
+const TIEMPO_ESCRITURA = 80;
+const PAUSA_LECTURA_MS = 800;
+const PAUSA_REPASO_MS = 600;
 const ADULTO_PIN = "1971";
 
-// ✅ Pegá acá tu WebApp URL del Apps Script (la generamos más abajo)
-const SUGERENCIAS_API_URL = "https://script.google.com/macros/s/AKfycbwrm--Dd82Ee06aiQgkKEn3GEd_c292xkwk6B5VMjgFmxnYcQqQDk9FSNuFRX97iWkE0Q/exec";
+// ✅ PEGÁ TU WEBAPP /exec AQUÍ
+const SUGERENCIAS_API_URL = "https://script.google.com/macros/s/AKfycbw_PA0H-NzujxdJwRvykqc_IAlBPLW0lhne0zpgFOTGUn1Fw-G1UYRJ0m4QsSYZQzhEfQ/exec";
 
 // ====== DATA base (consignas.js) ======
 let CONSIGNAS_GENERALES = Array.isArray(window.CONSIGNAS_GENERALES) ? window.CONSIGNAS_GENERALES : [];
@@ -38,7 +36,7 @@ const listaEl = document.getElementById("listaConsignas");
 
 const musicaFondo = document.getElementById("musicaFondo");
 
-// sugerencias modal
+// Sugerencias (modal)
 const btnSugerirAbrir = document.getElementById("btnSugerirAbrir");
 const modalSugerencia = document.getElementById("modalSugerencia");
 const btnSugerirCerrar = document.getElementById("btnSugerirCerrar");
@@ -56,13 +54,12 @@ let wakeLock = null;
 let modoAdultoActivo = false;
 let musicaActiva = false;
 
+let fadeInterval = null;
+
 // ====== helpers ======
 function show(el){ if(el) el.classList.remove("hidden"); }
 function hide(el){ if(el) el.classList.add("hidden"); }
-
-function limpiarTexto(t){
-  return String(t || "").replace(/\s+/g," ").trim();
-}
+function limpiarTexto(t){ return String(t || "").replace(/\s+/g," ").trim(); }
 
 function shuffle(arr){
   const a = [...arr];
@@ -76,7 +73,6 @@ function shuffle(arr){
 function cancelarVoz(){
   try{ if("speechSynthesis" in window) speechSynthesis.cancel(); }catch(e){}
 }
-
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
 function hablar(texto){
@@ -131,7 +127,6 @@ async function toggleFullscreen(){
 function setBtnFullscreenUI(){
   if(!btnFullscreen) return;
   const enFS = !!document.fullscreenElement;
-  // mantiene el svg y texto
   btnFullscreen.innerHTML = `
     <span class="fs-ico" aria-hidden="true">
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
@@ -145,26 +140,59 @@ function setBtnFullscreenUI(){
   `;
 }
 
-// ====== Música (espera) ======
-function playMusica(){
-  if(!musicaFondo) return;
-  musicaFondo.volume = 0.25;
-  musicaFondo.play().catch(()=>{});
-}
-function pauseMusica(){
-  if(!musicaFondo) return;
-  musicaFondo.pause();
-}
+// ====== Música (espera) + fade + recuerda estado ======
 function setBtnMusicaUI(){
   if(!btnMusica) return;
   btnMusica.setAttribute("aria-pressed", musicaActiva ? "true" : "false");
   btnMusica.textContent = musicaActiva ? "🔊 Música" : "🎵 Música";
 }
+
+function fadeTo(target, ms = 350){
+  if(!musicaFondo) return;
+  clearInterval(fadeInterval);
+
+  const start = typeof musicaFondo.volume === "number" ? musicaFondo.volume : 0;
+  const steps = 18;
+  const stepMs = Math.max(12, Math.floor(ms / steps));
+  let i = 0;
+
+  fadeInterval = setInterval(()=>{
+    i++;
+    const v = start + (target - start) * (i / steps);
+    musicaFondo.volume = Math.max(0, Math.min(1, v));
+
+    if(i >= steps){
+      clearInterval(fadeInterval);
+      fadeInterval = null;
+      if(target === 0) musicaFondo.pause();
+    }
+  }, stepMs);
+}
+
+function playMusica(){
+  if(!musicaFondo) return;
+  musicaFondo.volume = 0;
+  musicaFondo.play().catch(()=>{});
+  fadeTo(0.25, 450);
+}
+function pauseMusica(){
+  if(!musicaFondo) return;
+  fadeTo(0, 250);
+}
+
 function toggleMusica(){
   musicaActiva = !musicaActiva;
+  localStorage.setItem("diezde_musica", musicaActiva ? "1" : "0");
   setBtnMusicaUI();
   if(musicaActiva) playMusica();
   else pauseMusica();
+}
+
+function restoreMusicaPref(){
+  musicaActiva = localStorage.getItem("diezde_musica") === "1";
+  setBtnMusicaUI();
+  // Ojo: por políticas del celu, solo va a sonar cuando el usuario toque algo alguna vez.
+  // Igual lo dejamos listo.
 }
 
 // ====== Modo Adulto con PIN ======
@@ -176,6 +204,7 @@ function setAdultoUI(){
 function pedirPINyToggleAdulto(){
   const pin = prompt("Ingresá PIN para Modo Adulto:");
   if(pin === null) return;
+
   if(pin.trim() === ADULTO_PIN){
     modoAdultoActivo = !modoAdultoActivo;
     setAdultoUI();
@@ -253,7 +282,7 @@ async function iniciarRonda(){
   }
 
   cancelarVoz();
-  pauseMusica(); // para que no se pise con la voz
+  pauseMusica();
 
   await activarWakeLock();
 
@@ -267,20 +296,17 @@ async function iniciarRonda(){
 
   if(estado) estado.textContent = "Escuchá…";
 
-  // lectura numerada
   for(let i=0;i<ronda.length;i++){
     await hablar(`${i+1}. ${ronda[i].texto}`);
     await sleep(PAUSA_LECTURA_MS);
   }
 
-  // repaso
   await hablar("Repasamos");
   for(const c of ronda){
     await hablar(c.texto);
     await sleep(PAUSA_REPASO_MS);
   }
 
-  // escribir
   hide(vistaLectura);
   show(vistaRespuesta);
   show(btnTerminar);
@@ -301,9 +327,7 @@ function terminarRonda(){
 
   liberarWakeLock();
 
-  // vuelve música si estaba ON
   if(musicaActiva) playMusica();
-
   hablar("Tiempo");
 }
 
@@ -319,7 +343,39 @@ async function repetirConsignas(){
   }
 }
 
-// ====== Sugerencias (enviar) ======
+// ====== JSONP (SIN CORS) ======
+function jsonp(url, timeoutMs = 9000){
+  return new Promise((resolve, reject)=>{
+    const cb = `cb_${Date.now()}_${Math.floor(Math.random()*99999)}`;
+
+    const cleanup = ()=>{
+      try{ delete window[cb]; }catch(e){}
+      if(script && script.parentNode) script.parentNode.removeChild(script);
+      clearTimeout(to);
+    };
+
+    window[cb] = (data)=>{
+      cleanup();
+      resolve(data);
+    };
+
+    const script = document.createElement("script");
+    script.src = url + (url.includes("?") ? "&" : "?") + "callback=" + encodeURIComponent(cb);
+    script.onerror = ()=>{
+      cleanup();
+      reject(new Error("jsonp_error"));
+    };
+
+    const to = setTimeout(()=>{
+      cleanup();
+      reject(new Error("jsonp_timeout"));
+    }, timeoutMs);
+
+    document.head.appendChild(script);
+  });
+}
+
+// ====== Sugerencias ======
 function abrirSugerencias(){
   if(!modalSugerencia) return;
   if(inputSugerencia) inputSugerencia.value = "";
@@ -341,52 +397,52 @@ function msgSugerencia(texto){
 
 async function enviarSugerencia(){
   const texto = limpiarTexto(inputSugerencia?.value);
-  const categoria = selectCategoria?.value || "GENERAL";
+  const categoria = (selectCategoria?.value || "GENERAL").toUpperCase();
 
   if(texto.length < 4){
     msgSugerencia("Escribí una consigna un poquito más larga 🙂");
     return;
   }
 
-  if(SUGERENCIAS_API_URL === "PEGAR_ACA_TU_URL_DE_WEBAPP"){
+  if(!SUGERENCIAS_API_URL || SUGERENCIAS_API_URL.includes("PEGAR_ACA")){
     msgSugerencia("Falta configurar la URL de sugerencias (Apps Script).");
     return;
   }
 
-  // anti-zarpado básico (igual vos aprobás en Sheet)
-  const payload = { texto, categoria };
+  msgSugerencia("Enviando…");
+
+  const url =
+    `${SUGERENCIAS_API_URL}?action=sugerir` +
+    `&texto=${encodeURIComponent(texto)}` +
+    `&categoria=${encodeURIComponent(categoria)}`;
 
   try{
-    msgSugerencia("Enviando…");
-    const r = await fetch(SUGERENCIAS_API_URL, {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify(payload)
-    });
-
-    const data = await r.json().catch(()=> ({}));
-    if(r.ok && data && data.ok){
+    const data = await jsonp(url);
+    if(data && data.ok){
       msgSugerencia("¡Listo! Te llegó para aprobar ✅");
       if(inputSugerencia) inputSugerencia.value = "";
     }else{
-      msgSugerencia("No se pudo enviar. Probá de nuevo.");
+      msgSugerencia("No se pudo enviar. Probá otra vez.");
     }
   }catch(e){
     msgSugerencia("Error de conexión. Probá otra vez.");
   }
 }
 
-// ====== Cargar aprobadas desde tu Sheet (auto) ======
+// ====== Cargar aprobadas ======
 async function cargarAprobadas(){
-  if(SUGERENCIAS_API_URL === "PEGAR_ACA_TU_URL_DE_WEBAPP") return;
+  if(!SUGERENCIAS_API_URL || SUGERENCIAS_API_URL.includes("PEGAR_ACA")) return;
 
   try{
+    const urlG = `${SUGERENCIAS_API_URL}?action=aprobadas&cat=GENERAL`;
+    const urlA = `${SUGERENCIAS_API_URL}?action=aprobadas&cat=ADULTO`;
+
     const [g,a] = await Promise.all([
-      fetch(`${SUGERENCIAS_API_URL}?action=aprobadas&cat=GENERAL`).then(r=>r.json()).catch(()=>[]),
-      fetch(`${SUGERENCIAS_API_URL}?action=aprobadas&cat=ADULTO`).then(r=>r.json()).catch(()=>[])
+      jsonp(urlG).catch(()=>[]),
+      jsonp(urlA).catch(()=>[])
     ]);
 
-    // merge por id (sin duplicar)
+    // merge sin duplicar
     const baseG = new Map((CONSIGNAS_GENERALES||[]).map(x => [Number(x.id), x]));
     (Array.isArray(g)?g:[]).forEach(x=>{
       const id = Number(x.id);
@@ -411,12 +467,13 @@ async function cargarAprobadas(){
   if(timerEl) timerEl.textContent = TIEMPO_ESCRITURA;
   setAdultoUI();
   setBtnFullscreenUI();
+  restoreMusicaPref();
   setBtnMusicaUI();
 
-  // carga aprobadas al entrar (si configuraste API)
+  // carga aprobadas al entrar
   cargarAprobadas();
 
-  // cerrar modal tocando afuera
+  // modal: cerrar tocando el fondo
   modalSugerencia?.addEventListener("click", (ev)=>{
     if(ev.target === modalSugerencia) cerrarSugerencias();
   });
@@ -433,6 +490,13 @@ btnFullscreen?.addEventListener("click", toggleFullscreen);
 document.addEventListener("fullscreenchange", setBtnFullscreenUI);
 
 btnMusica?.addEventListener("click", toggleMusica);
+
+// para que si el usuario ya dejó música ON, se active al primer toque en la pantalla
+document.addEventListener("click", ()=>{
+  if(musicaActiva && musicaFondo && musicaFondo.paused){
+    playMusica();
+  }
+},{ once:true });
 
 btnSugerirAbrir?.addEventListener("click", abrirSugerencias);
 btnSugerirCerrar?.addEventListener("click", cerrarSugerencias);
