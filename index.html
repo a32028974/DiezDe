@@ -13,62 +13,51 @@
   <h1>🎲 Diez DE</h1>
 
   <div class="controls">
-    <!-- Botón Adulto con PIN -->
-    <button id="btnAdulto" class="btn-sec" type="button" aria-pressed="false" title="Modo Adulto (con PIN)">
-      🔒 Adulto
-    </button>
-
-    <!-- Fullscreen opcional -->
-    <button id="btnFullscreen" class="btn-sec btn-fs" type="button" title="Pantalla completa">
-      <span class="fs-ico" aria-hidden="true">
-        <!-- Icono estilo “dos flechas” (tipo tu imagen) -->
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
-          <path d="M14 4h6v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          <path d="M20 4l-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          <path d="M10 20H4v-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          <path d="M4 20l7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-      </span>
-      Fullscreen
-    </button>
-
-    <button id="btnIniciar" type="button">Iniciar ronda</button>
+    <button id="btnAdulto" class="btn-sec">🔒 Adulto</button>
+    <button id="btnFullscreen" class="btn-sec">⛶ Fullscreen</button>
+    <button id="btnMusica" class="btn-sec">🎵 Música</button>
+    <button id="btnIniciar">Iniciar ronda</button>
   </div>
 
   <div id="estado" class="estado">Listos para jugar</div>
 
-  <!-- LECTURA -->
   <div id="vistaLectura" class="panel hidden">
-    <h2>Escuchá y mirá 👀🔊</h2>
     <ol id="listaConsignas" class="lista"></ol>
-
-    <button id="btnRepetir" class="btn-sec" type="button">
-      🔁 Repetir consignas
-    </button>
+    <button id="btnRepetir" class="btn-sec">🔁 Repetir</button>
   </div>
 
-  <!-- RESPUESTA -->
   <div id="vistaRespuesta" class="panel hidden">
-    <h2>Escriban de memoria ✍️</h2>
-    <div class="bloqueo">🔒 Consignas ocultas</div>
+    <div class="bloqueo">✍️ Escriban de memoria</div>
   </div>
 
-  <!-- TIMER -->
-  <div id="timer" class="timer hidden">80</div>
+  <div id="timer" class="timer hidden">90</div>
+  <button id="btnTerminar" class="btn-sec hidden">⏹️ Terminar ahora</button>
 
-  <button id="btnTerminar" class="btn-sec hidden" type="button">
-    ⏹️ Terminar ahora
-  </button>
+  <!-- SUGERIR CONSIGNA -->
+  <div class="panel sugerencia">
+    <h2>💡 Sugerir consigna</h2>
+    <input id="inputSugerencia" placeholder="Escribí la consigna…" />
+    <select id="selectCategoria">
+      <option value="GENERAL">General</option>
+      <option value="ADULTO">Adulto</option>
+    </select>
+    <button id="btnEnviarSugerencia" class="btn-sec">Enviar sugerencia</button>
+  </div>
 
-  <!-- Footer FrecWD (chiquito) -->
+  <!-- Footer -->
   <footer class="frecwd-footer">
-  <a class="frecwd-badge" href="https://wa.me/5491136065609" target="_blank" rel="noopener">
-    <span class="frecwd-dot" aria-hidden="true"></span>
-    <span class="frecwd-text">FrecWD</span>
-  </a>
-</footer>
+    <a class="frecwd-badge" href="https://wa.me/5491136065609" target="_blank">
+      <span class="frecwd-dot"></span>
+      <span class="frecwd-text">FrecWD</span>
+    </a>
+  </footer>
 
 </div>
+
+<audio id="musicaFondo" loop>
+  <source src="musica.mp3" type="audio/mpeg">
+</audio>
+
 <script src="consignas.js"></script>
 <script src="app.js"></script>
 </body>
