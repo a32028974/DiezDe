@@ -1,79 +1,71 @@
-body{
-  margin:0;
-  font-family:system-ui, Arial;
-  background:#0b0f17;
-  color:#e5e7eb;
-  padding:14px;
+const consignasGenerales = window.CONSIGNAS_GENERALES;
+const consignasAdulto = window.CONSIGNAS_ADULTO;
+
+const btnIniciar = document.getElementById("btnIniciar");
+const btnRepetir = document.getElementById("btnRepetir");
+const btnTerminar = document.getElementById("btnTerminar");
+const btnMusica = document.getElementById("btnMusica");
+const musica = document.getElementById("musicaFondo");
+
+const vistaLectura = document.getElementById("vistaLectura");
+const vistaRespuesta = document.getElementById("vistaRespuesta");
+const lista = document.getElementById("listaConsignas");
+const timerEl = document.getElementById("timer");
+const estado = document.getElementById("estado");
+
+let ronda = [];
+let timer = null;
+let musicaActiva = false;
+
+// Música
+btnMusica.onclick = ()=>{
+  musicaActiva = !musicaActiva;
+  if(musicaActiva){
+    musica.volume = 0.25;
+    musica.play();
+    btnMusica.textContent = "🔊 Música";
+  }else{
+    musica.pause();
+    btnMusica.textContent = "🎵 Música";
+  }
+};
+
+function seleccionarRonda(){
+  return consignasGenerales.sort(()=>0.5-Math.random()).slice(0,10);
 }
 
-.app{ max-width:900px; margin:auto; }
+btnIniciar.onclick = async ()=>{
+  musica.pause();
+  ronda = seleccionarRonda();
+  lista.innerHTML = "";
+  ronda.forEach(c=>{
+    const li = document.createElement("li");
+    li.textContent = c.texto;
+    lista.appendChild(li);
+  });
 
-.controls{
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-}
+  vistaLectura.classList.remove("hidden");
+  vistaRespuesta.classList.add("hidden");
 
-button{
-  padding:12px 14px;
-  border-radius:14px;
-  border:0;
-  background:#1f2937;
-  color:#fff;
-  font-weight:700;
-}
+  timerEl.classList.remove("hidden");
+  btnTerminar.classList.remove("hidden");
 
-#btnIniciar{ background:#22c55e; color:#052e16; }
+  let t = 90;
+  timerEl.textContent = t;
 
-.panel{
-  background:#0f172a;
-  padding:14px;
-  border-radius:16px;
-  margin-top:12px;
-}
+  timer = setInterval(()=>{
+    t--;
+    timerEl.textContent = t;
+    if(t<=0) terminar();
+  },1000);
+};
 
-.lista{
-  font-size:22px;
-  line-height:1.4;
-}
+btnTerminar.onclick = terminar;
 
-.timer{
-  font-size:72px;
-  text-align:center;
-  font-weight:900;
-}
-
-.hidden{ display:none; }
-
-input, select{
-  width:100%;
-  padding:10px;
-  margin-top:6px;
-  border-radius:10px;
-  border:0;
-}
-
-.sugerencia{ margin-top:20px; }
-
-.frecwd-footer{
-  display:flex;
-  justify-content:center;
-  margin-top:16px;
-}
-
-.frecwd-badge{
-  display:flex;
-  gap:10px;
-  background:#020617;
-  padding:10px 16px;
-  border-radius:999px;
-  text-decoration:none;
-  color:#fff;
-}
-
-.frecwd-dot{
-  width:10px;
-  height:10px;
-  background:#22d3ee;
-  border-radius:50%;
+function terminar(){
+  clearInterval(timer);
+  vistaRespuesta.classList.add("hidden");
+  vistaLectura.classList.remove("hidden");
+  btnTerminar.classList.add("hidden");
+  if(musicaActiva) musica.play();
 }
