@@ -18,7 +18,7 @@ h1{
 
 .controls{
   display:flex;
-  gap:14px;
+  gap:10px;
   align-items:center;
   flex-wrap:wrap;
   margin-bottom:14px;
@@ -40,7 +40,17 @@ button{
 .btn-sec{
   background:#334155;
   color:#fff;
-  margin-top:12px;
+}
+
+.btn-fs{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+
+.fs-ico{
+  display:inline-flex;
+  color:#60a5fa; /* azulito tipo “tech” */
 }
 
 .estado{
@@ -66,7 +76,7 @@ button{
   font-size:90px;
   font-weight:800;
   text-align:center;
-  margin-top:20px;
+  margin-top:16px;
 }
 
 .bloqueo{
@@ -82,7 +92,29 @@ button{
   display:none;
 }
 
-/* CELU */
+/* Footer FrecWD chiquito */
+.frecwd-footer{
+  text-align:center;
+  margin-top:16px;
+  padding-top:10px;
+  opacity:.85;
+  border-top:1px solid rgba(255,255,255,.08);
+  font-size:13px;
+}
+
+.frecwd-link{
+  color:#94a3b8;
+  text-decoration:none;
+  font-weight:600;
+  letter-spacing:.2px;
+}
+
+.frecwd-link:hover{
+  text-decoration:underline;
+  opacity:1;
+}
+
+/* CELU (más chico para que no quede gigante) */
 @media (max-width:600px){
   body{ padding:14px; }
 
@@ -90,8 +122,8 @@ button{
   .estado{ font-size:16px; }
 
   button{
-    padding:12px 14px;
-    font-size:16px;
+    padding:11px 12px;
+    font-size:15px;
     border-radius:12px;
   }
 
@@ -106,7 +138,7 @@ button{
   }
 
   .timer{
-    font-size:76px;
+    font-size:74px;
   }
 
   .bloqueo{
@@ -114,7 +146,6 @@ button{
     padding:14px;
   }
 
-  /* Footer FrecWD bien chiquito */
   .frecwd-footer{
     margin-top:14px;
     padding-top:10px;
