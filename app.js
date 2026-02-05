@@ -3,9 +3,9 @@
 ========================== */
 
 // ====== CONFIG ======
-const TIEMPO_ESCRITURA = 60;
-const PAUSA_LECTURA_MS = 1500;
-const PAUSA_REPASO_MS = 1000;
+const TIEMPO_ESCRITURA = 90;
+const PAUSA_LECTURA_MS = 1000;
+const PAUSA_REPASO_MS = 800;
 
 // ====== DATA ======
 const consignas = [
