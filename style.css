@@ -1,236 +1,79 @@
-/* ==========================
-   DIEZ DE - style.css (NUEVO)
-   Mobile-first, sin scroll horizontal
-========================== */
-
-:root{
-  --bg: #0b0f17;
-  --panel: #0f172a;
-  --panel-2:#0b1220;
-  --text: #e5e7eb;
-  --muted:#94a3b8;
-  --border: rgba(148,163,184,.16);
-
-  --green:#22c55e;
-  --greenText:#052e16;
-
-  --btn:#111827;
-  --btn2:#1f2937;
-
-  --cyan:#22d3ee;
-  --shadow: 0 10px 28px rgba(0,0,0,.35);
-
-  --radius: 16px;
-}
-
-*{ box-sizing:border-box; }
-
-html,body{ height:100%; }
-
 body{
   margin:0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  background: radial-gradient(1200px 600px at 15% 10%, rgba(34,211,238,.10), transparent 55%),
-              radial-gradient(900px 500px at 85% 0%, rgba(34,197,94,.10), transparent 55%),
-              var(--bg);
-  color: var(--text);
-  padding: 14px;
-  overflow-x:hidden;
+  font-family:system-ui, Arial;
+  background:#0b0f17;
+  color:#e5e7eb;
+  padding:14px;
 }
 
-.app{
-  width:100%;
-  max-width: 920px;
-  margin: 0 auto;
-}
+.app{ max-width:900px; margin:auto; }
 
-/* ===== Títulos ===== */
-h1{
-  margin: 6px 0 10px;
-  font-size: clamp(26px, 4.5vw, 38px);
-  letter-spacing:.2px;
-}
-
-h2{
-  margin: 0 0 10px;
-  font-size: clamp(18px, 3.3vw, 22px);
-  color: var(--text);
-}
-
-/* ===== Controles superiores ===== */
 .controls{
   display:flex;
   flex-wrap:wrap;
   gap:10px;
-  align-items:center;
-  margin-bottom: 12px;
 }
 
-/* ===== Botones ===== */
 button{
-  appearance:none;
-  border:1px solid var(--border);
-  background: var(--btn);
-  color: var(--text);
-  padding: 12px 14px;
-  border-radius: 14px;
-  font-size: 15px;
-  font-weight: 700;
-  cursor:pointer;
-  box-shadow: 0 6px 16px rgba(0,0,0,.25);
-  transition: transform .06s ease, border-color .15s ease, opacity .15s ease;
-  user-select:none;
+  padding:12px 14px;
+  border-radius:14px;
+  border:0;
+  background:#1f2937;
+  color:#fff;
+  font-weight:700;
 }
 
-button:active{
-  transform: translateY(1px) scale(.99);
-}
+#btnIniciar{ background:#22c55e; color:#052e16; }
 
-button:hover{
-  border-color: rgba(34,211,238,.30);
-}
-
-#btnIniciar{
-  background: linear-gradient(180deg, rgba(34,197,94,.95), rgba(34,197,94,.75));
-  border-color: rgba(34,197,94,.35);
-  color: var(--greenText);
-  box-shadow: 0 10px 22px rgba(34,197,94,.15);
-}
-
-.btn-sec{
-  background: var(--btn2);
-}
-
-.btn-fs{
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
-
-/* iconito del botón fullscreen */
-.fs-ico{
-  display:inline-flex;
-  color: var(--cyan);
-}
-
-/* ===== Estado ===== */
-.estado{
-  background: rgba(15,23,42,.45);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 10px 12px;
-  font-size: 14px;
-  color: var(--muted);
-  box-shadow: var(--shadow);
-}
-
-/* ===== Paneles ===== */
 .panel{
-  margin-top: 12px;
-  background: linear-gradient(180deg, rgba(15,23,42,.92), rgba(11,18,32,.90));
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px;
-  box-shadow: var(--shadow);
+  background:#0f172a;
+  padding:14px;
+  border-radius:16px;
+  margin-top:12px;
 }
 
-/* ===== Lista de consignas ===== */
 .lista{
-  margin: 10px 0 0;
-  padding-left: 22px;
-  font-size: clamp(17px, 3.6vw, 24px);
-  line-height: 1.45;
+  font-size:22px;
+  line-height:1.4;
 }
 
-.lista li{
-  margin: 6px 0;
-}
-
-/* ===== Bloqueo (modo escribir) ===== */
-.bloqueo{
-  background: rgba(2,6,23,.75);
-  border: 1px solid rgba(34,211,238,.20);
-  border-radius: 14px;
-  padding: 14px;
-  font-size: 16px;
-  text-align:center;
-  color: var(--text);
-  box-shadow: 0 10px 24px rgba(0,0,0,.25);
-}
-
-/* ===== Timer ===== */
 .timer{
-  margin-top: 14px;
+  font-size:72px;
   text-align:center;
-  font-weight: 900;
-  letter-spacing: 1px;
-  font-size: clamp(56px, 16vw, 92px);
-  color: var(--text);
-  text-shadow: 0 10px 24px rgba(0,0,0,.35);
+  font-weight:900;
 }
 
-/* ===== Botón terminar ===== */
-#btnTerminar{
+.hidden{ display:none; }
+
+input, select{
   width:100%;
-  margin-top: 10px;
-  padding: 13px 14px;
+  padding:10px;
+  margin-top:6px;
+  border-radius:10px;
+  border:0;
 }
 
-/* ===== Footer FrecWD (lindo, chiquito) ===== */
+.sugerencia{ margin-top:20px; }
+
 .frecwd-footer{
   display:flex;
   justify-content:center;
-  margin-top: 14px;
+  margin-top:16px;
 }
 
 .frecwd-badge{
-  display:inline-flex;
-  align-items:center;
+  display:flex;
   gap:10px;
-  padding: 10px 16px;
+  background:#020617;
+  padding:10px 16px;
   border-radius:999px;
-  background: rgba(2,6,23,.55);
-  border: 1px solid rgba(148,163,184,.18);
   text-decoration:none;
-  box-shadow: 0 12px 26px rgba(0,0,0,.25);
+  color:#fff;
 }
 
 .frecwd-dot{
   width:10px;
   height:10px;
+  background:#22d3ee;
   border-radius:50%;
-  background: var(--cyan);
-  box-shadow: 0 0 0 4px rgba(34,211,238,.12);
-}
-
-.frecwd-text{
-  color: var(--text);
-  font-weight: 800;
-  letter-spacing:.3px;
-  font-size: 14px;
-}
-
-.frecwd-badge:hover{
-  border-color: rgba(34,211,238,.35);
-}
-
-/* ===== Utilidades ===== */
-.hidden{ display:none !important; }
-
-/* ===== Pantallas grandes (desktop) ===== */
-@media (min-width: 700px){
-  body{ padding: 18px; }
-  .controls{ gap:12px; }
-  button{ font-size: 16px; padding: 13px 16px; }
-  .panel{ padding: 16px; }
-  .estado{ font-size: 15px; }
-  #btnTerminar{ width:auto; }
-}
-
-/* ===== Celu muy chico ===== */
-@media (max-width: 360px){
-  button{ padding: 11px 12px; font-size: 14px; }
-  .lista{ font-size: 16px; }
-  .bloqueo{ font-size: 15px; }
-  .frecwd-text{ font-size: 13px; }
 }
