@@ -1,14 +1,20 @@
 /* ==========================
-   DIEZ COSAS - APP.JS (SIN ADULTO)
-   - 180 consignas GENERALES
-   - 10 por ronda
+   DIEZ COSAS - APP.JS
+   - Generales: 180
+   - Adultas: (suaves) opcional con PIN
+   - 10 por ronda (9 general + 1 adulta si está activo)
    - Evita repetir la ronda anterior (si hay suficientes)
+   - Fullscreen opcional (botón)
+   - Botón terminar tiempo
 ========================== */
 
 // ====== CONFIG ======
-const TIEMPO_ESCRITURA = 90;
-const PAUSA_LECTURA_MS = 1000;
-const PAUSA_REPASO_MS = 800;
+const TIEMPO_ESCRITURA = 80;
+const PAUSA_LECTURA_MS = 800;
+const PAUSA_REPASO_MS = 620;
+
+// PIN modo adulto (cambiá acá si querés)
+const ADULTO_PIN = "1971";
 
 // ====== DATA (180 GENERALES) ======
 const consignas = [
@@ -211,9 +217,26 @@ const consignas = [
   { id: 180, texto: "Algo que se use para llamar por teléfono", categoria: "GENERAL" },
 ];
 
+// ====== ADULTAS (suaves, no zarpadas) ======
+const consignasAdulto = [
+  { id: 1001, texto: "Algo que te da vergüenza admitir", categoria: "ADULTO" },
+  { id: 1002, texto: "Una excusa típica para zafar", categoria: "ADULTO" },
+  { id: 1003, texto: "Un lugar del cuerpo donde darías un beso", categoria: "ADULTO" },
+  { id: 1004, texto: "Una frase de chamuyo", categoria: "ADULTO" },
+  { id: 1005, texto: "Una cosa que harías si nadie se entera", categoria: "ADULTO" },
+  { id: 1006, texto: "Algo que te resulta sexy (sin decir personas)", categoria: "ADULTO" },
+  { id: 1007, texto: "Una situación incómoda de pareja", categoria: "ADULTO" },
+  { id: 1008, texto: "Un secreto “chiquito”", categoria: "ADULTO" },
+  { id: 1009, texto: "Algo que te pone nervioso/a", categoria: "ADULTO" },
+  { id: 1010, texto: "Una posición en la cama", categoria: "ADULTO" },
+];
+
 // ====== UI ======
 const btnIniciar = document.getElementById("btnIniciar");
 const btnRepetir = document.getElementById("btnRepetir");
+const btnTerminar = document.getElementById("btnTerminar");
+const btnFullscreen = document.getElementById("btnFullscreen");
+const btnAdulto = document.getElementById("btnAdulto");
 
 const estado = document.getElementById("estado");
 const timerEl = document.getElementById("timer");
@@ -226,12 +249,19 @@ let ronda = [];
 let ultimaRondaIDs = [];
 let timerId = null;
 let wakeLock = null;
+let modoAdultoActivo = false;
 
 // ====== HELPERS ======
 function show(el){ if(el) el.classList.remove("hidden"); }
 function hide(el){ if(el) el.classList.add("hidden"); }
 
-// Fisher–Yates shuffle (mezcla bien de verdad)
+function setAdultoUI(){
+  if(!btnAdulto) return;
+  btnAdulto.setAttribute("aria-pressed", modoAdultoActivo ? "true" : "false");
+  btnAdulto.textContent = modoAdultoActivo ? "🔥 Adulto" : "🔒 Adulto";
+}
+
+// Fisher–Yates shuffle
 function shuffle(arr){
   const a = [...arr];
   for(let i = a.length - 1; i > 0; i--){
@@ -241,21 +271,27 @@ function shuffle(arr){
   return a;
 }
 
-function seleccionar10(){
+function seleccionarRonda(){
   const generales = consignas.filter(c => c.categoria === "GENERAL");
-  const cantidad = 10;
+
+  // Queremos 10 total: si adulto activo => 9 general + 1 adulto
+  const cantGeneral = modoAdultoActivo ? 9 : 10;
+  const cantAdulto = modoAdultoActivo ? 1 : 0;
 
   // Evitar repetir la ronda anterior si se puede
-  let pool = generales.filter(c => !ultimaRondaIDs.includes(c.id));
-
-  // Si por algún motivo no alcanza, permitimos repetir
-  if(pool.length < cantidad){
-    pool = generales;
+  let poolGeneral = generales.filter(c => !ultimaRondaIDs.includes(c.id));
+  if(poolGeneral.length < cantGeneral){
+    poolGeneral = generales;
   }
 
-  let seleccion = shuffle(pool).slice(0, cantidad);
+  let seleccion = shuffle(poolGeneral).slice(0, cantGeneral);
 
-  // Mezclamos el orden final
+  if(cantAdulto === 1){
+    const poolAdulto = consignasAdulto;
+    const unoAdulto = shuffle(poolAdulto).slice(0,1);
+    seleccion = [...seleccion, ...unoAdulto];
+  }
+
   seleccion = shuffle(seleccion);
 
   ultimaRondaIDs = seleccion.map(c => c.id);
@@ -280,20 +316,42 @@ function hablar(texto){
     if(!("speechSynthesis" in window)){ res(); return; }
     const u = new SpeechSynthesisUtterance(texto);
     u.lang = "es-AR";
-    u.rate = 1; // podés tocar esto si querés (0.9 más lento / 1.05 más rápido)
+    u.rate = 1;
     u.onend = res;
     speechSynthesis.speak(u);
   });
 }
 
-// ====== FULLSCREEN + WAKELOCK ======
-function activarPantallaCompleta(){
-  const el = document.documentElement;
-  if(el && el.requestFullscreen){
-    el.requestFullscreen().catch(()=>{});
-  }
+// ====== FULLSCREEN (OPCIONAL) ======
+async function toggleFullscreen(){
+  try{
+    if(!document.fullscreenElement){
+      await document.documentElement.requestFullscreen();
+    }else{
+      await document.exitFullscreen();
+    }
+  }catch(e){}
 }
 
+function actualizarTextoFS(){
+  if(!btnFullscreen) return;
+  const enFS = !!document.fullscreenElement;
+  btnFullscreen.textContent = enFS ? "Salir Fullscreen" : "Fullscreen";
+  // mantener icono: lo regenero simple
+  const span = document.createElement("span");
+  span.className = "fs-ico";
+  span.setAttribute("aria-hidden","true");
+  span.innerHTML = `
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
+      <path d="M14 4h6v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M20 4l-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M10 20H4v-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M4 20l7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </svg>`;
+  btnFullscreen.prepend(span);
+}
+
+// ====== WAKELOCK ======
 async function activarWakeLock(){
   try{
     if("wakeLock" in navigator){
@@ -334,15 +392,15 @@ function iniciarTimer(){
 async function iniciarRonda(){
   if("speechSynthesis" in window) speechSynthesis.cancel();
 
-  activarPantallaCompleta();
   activarWakeLock();
 
-  ronda = seleccionar10();
+  ronda = seleccionarRonda();
   renderLectura(ronda);
 
   show(vistaLectura);
   hide(vistaRespuesta);
   show(timerEl);
+  hide(btnTerminar);
   if(estado) estado.textContent = "Escuchá…";
 
   for(let i = 0; i < ronda.length; i++){
@@ -358,15 +416,25 @@ async function iniciarRonda(){
 
   hide(vistaLectura);
   show(vistaRespuesta);
+  show(btnTerminar);
   if(estado) estado.textContent = "¡A escribir de memoria!";
   iniciarTimer();
 }
 
 function terminar(){
+  // cortar timer si estaba corriendo
+  if(timerId){
+    clearInterval(timerId);
+    timerId = null;
+  }
+
   hide(vistaRespuesta);
   show(vistaLectura);
   renderLectura(ronda);
+
+  hide(btnTerminar);
   if(estado) estado.textContent = "Tiempo – corrigen respuestas";
+
   liberarWakeLock();
   hablar("Tiempo");
 }
@@ -380,6 +448,39 @@ async function repetirConsignas(){
   }
 }
 
+// ====== MODO ADULTO CON PIN ======
+function pedirPINyToggleAdulto(){
+  const pin = prompt("Ingresá PIN para Modo Adulto:");
+  if(pin === null) return;
+
+  if(pin.trim() === ADULTO_PIN){
+    modoAdultoActivo = !modoAdultoActivo;
+    setAdultoUI();
+    if(estado){
+      estado.textContent = modoAdultoActivo
+        ? "Modo Adulto ACTIVADO (1 por ronda)"
+        : "Modo Adulto DESACTIVADO";
+    }
+  }else{
+    if(estado) estado.textContent = "PIN incorrecto ❌";
+  }
+}
+
 // ====== EVENTS ======
 if(btnIniciar) btnIniciar.addEventListener("click", iniciarRonda);
 if(btnRepetir) btnRepetir.addEventListener("click", repetirConsignas);
+
+if(btnTerminar){
+  btnTerminar.addEventListener("click", terminar);
+}
+
+if(btnFullscreen){
+  btnFullscreen.addEventListener("click", toggleFullscreen);
+  document.addEventListener("fullscreenchange", actualizarTextoFS);
+  actualizarTextoFS();
+}
+
+if(btnAdulto){
+  btnAdulto.addEventListener("click", pedirPINyToggleAdulto);
+  setAdultoUI();
+}
