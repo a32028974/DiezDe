@@ -84,7 +84,40 @@ button{
 
 /* CELU */
 @media (max-width:600px){
-  h1{font-size:34px;}
-  .lista{font-size:30px;}
-  .timer{font-size:100px;}
+  body{ padding:14px; }
+
+  h1{font-size:28px;}
+  .estado{ font-size:16px; }
+
+  button{
+    padding:12px 14px;
+    font-size:16px;
+    border-radius:12px;
+  }
+
+  .panel{
+    padding:14px;
+    border-radius:14px;
+  }
+
+  .lista{
+    font-size:20px;
+    line-height:1.45;
+  }
+
+  .timer{
+    font-size:76px;
+  }
+
+  .bloqueo{
+    font-size:16px;
+    padding:14px;
+  }
+
+  /* Footer FrecWD bien chiquito */
+  .frecwd-footer{
+    margin-top:14px;
+    padding-top:10px;
+    font-size:12px;
+  }
 }
