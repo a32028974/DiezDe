@@ -10,8 +10,8 @@
 
 // ====== CONFIG ======
 const TIEMPO_ESCRITURA = 70;
-const PAUSA_LECTURA_MS = 720;
-const PAUSA_REPASO_MS = 600;
+const PAUSA_LECTURA_MS = 650;
+const PAUSA_REPASO_MS = 500;
 const ADULTO_PIN = "1971";
 
 // ✅ PEGÁ TU WEBAPP /exec AQUÍ
