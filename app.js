@@ -42,7 +42,6 @@ const btnMusica = document.getElementById("btnMusica");
 const btnPrevTrack = document.getElementById("btnPrevTrack");
 const btnNextTrack = document.getElementById("btnNextTrack");
 
-
 const estado = document.getElementById("estado");
 const timerEl = document.getElementById("timer");
 const vistaLectura = document.getElementById("vistaLectura");
@@ -119,7 +118,6 @@ function renderLectura(items){
   listaEl.innerHTML = "";
   items.forEach(c=>{
     const li = document.createElement("li");
-    // ✅ tus consignas son objetos {id, texto, categoria...}
     li.textContent = c.texto;
     listaEl.appendChild(li);
   });
@@ -192,7 +190,6 @@ function nextTrack(){
 function prevTrack(){
   if(!musicaFondo) return;
 
-  // Si ya venía sonando y pasaron > 2s, reinicia la actual
   try{
     if(!musicaFondo.paused && musicaFondo.currentTime > 2){
       musicaFondo.currentTime = 0;
@@ -254,7 +251,6 @@ function restoreMusicaPref(){
   musicaActiva = localStorage.getItem(MUSIC_ON_KEY) === "1";
   setBtnMusicaUI();
 
-  // ✅ VOL SIEMPRE 15% al cargar
   setMusicVol(DEFAULT_MUSIC_VOL);
 
   if(musicaFondo){
@@ -580,6 +576,7 @@ document.addEventListener("click", ()=>{
 btnSugerirAbrir?.addEventListener("click", abrirSugerencias);
 btnSugerirCerrar?.addEventListener("click", cerrarSugerencias);
 btnEnviarSugerencia?.addEventListener("click", enviarSugerencia);
+
 // 🎵 Anterior / Siguiente canción
 btnNextTrack?.addEventListener("click", ()=>{
   userGestureUnlocked = true;
@@ -591,9 +588,27 @@ btnPrevTrack?.addEventListener("click", ()=>{
   prevTrack();
 });
 
-const btnInstr = document.getElementById("btnInstrucciones");
-const modalInstr = document.getElementById("modalInstrucciones");
-const cerrarInstr = document.getElementById("cerrarInstrucciones");
+// ✅ INSTRUCCIONES (ARREGLADO: esperar DOM listo + no romper si falta algo)
+document.addEventListener("DOMContentLoaded", () => {
+  const btnInstr = document.getElementById("btnInstrucciones");
+  const modalInstr = document.getElementById("modalInstrucciones");
+  const cerrarInstr = document.getElementById("cerrarInstrucciones");
 
-btnInstr.onclick = () => modalInstr.classList.remove("hidden");
-cerrarInstr.onclick = () => modalInstr.classList.add("hidden");
+  if(!btnInstr || !modalInstr || !cerrarInstr){
+    console.warn("Instrucciones: faltan elementos en el DOM", { btnInstr, modalInstr, cerrarInstr });
+    return;
+  }
+
+  btnInstr.onclick = () => modalInstr.classList.remove("hidden");
+  cerrarInstr.onclick = () => modalInstr.classList.add("hidden");
+
+  // cerrar tocando afuera (bonus)
+  modalInstr.addEventListener("click", (ev)=>{
+    if(ev.target === modalInstr) modalInstr.classList.add("hidden");
+  });
+
+  // cerrar con ESC (bonus)
+  document.addEventListener("keydown", (ev)=>{
+    if(ev.key === "Escape") modalInstr.classList.add("hidden");
+  });
+});
