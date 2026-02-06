@@ -38,6 +38,8 @@
       <!-- Toolbar (solo fullscreen) -->
       <div class="toolbar">
   <button id="btnFullscreen" class="btn btn-dark" type="button">Fullscreen</button>
+        <button id="btnInstrucciones">❓ Instrucciones</button>
+
 </div>
 
     </header>
@@ -134,5 +136,29 @@
     <script src="consignas.js?v=2026-02-06-2"></script>
     <script src="app.js?v=2026-02-06-2"></script>
   </div>
+  <div id="modalInstrucciones" class="modal hidden">
+  <div class="modal-content">
+    <h2>📋 Cómo jugar</h2>
+
+    <p>
+      Se muestran consignas una por una.<br>
+      Cada jugador debe escribir respuestas antes de que el tiempo termine.
+    </p>
+
+    <p>
+      ⏱️ Cuando termina el tiempo, se muestran todas las consignas para corregir.
+      Todos los jugadores tienen que decir: número y que pusieron.
+      Cada respuesta correcta +1 cada respuesta incorrecta -1 si no completaron nada - ni suma ni resta.
+    </p>
+
+    <p>
+      🔁 Podés repetir las consignas.<br>
+      📱 El modo pantalla completa mejora la experiencia.
+    </p>
+
+    <button id="cerrarInstrucciones">Cerrar</button>
+  </div>
+</div>
+
 </body>
 </html>
