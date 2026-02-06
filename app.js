@@ -39,6 +39,9 @@ const btnRepetir = document.getElementById("btnRepetir");
 const btnTerminar = document.getElementById("btnTerminar");
 const btnFullscreen = document.getElementById("btnFullscreen");
 const btnMusica = document.getElementById("btnMusica");
+const btnPrevTrack = document.getElementById("btnPrevTrack");
+const btnNextTrack = document.getElementById("btnNextTrack");
+
 
 const estado = document.getElementById("estado");
 const timerEl = document.getElementById("timer");
@@ -179,6 +182,26 @@ function setTrack(i){
   if(!musicaFondo) return;
   playlistIndex = (i + PLAYLIST.length) % PLAYLIST.length;
   musicaFondo.src = PLAYLIST[playlistIndex];
+}
+function nextTrack(){
+  if(!musicaFondo) return;
+  setTrack(playlistIndex + 1);
+  if(musicaActiva) playMusica();
+}
+
+function prevTrack(){
+  if(!musicaFondo) return;
+
+  // Si ya venía sonando y pasaron > 2s, reinicia la actual
+  try{
+    if(!musicaFondo.paused && musicaFondo.currentTime > 2){
+      musicaFondo.currentTime = 0;
+      return;
+    }
+  }catch(e){}
+
+  setTrack(playlistIndex - 1);
+  if(musicaActiva) playMusica();
 }
 
 function fadeTo(target, ms = 350){
@@ -557,3 +580,13 @@ document.addEventListener("click", ()=>{
 btnSugerirAbrir?.addEventListener("click", abrirSugerencias);
 btnSugerirCerrar?.addEventListener("click", cerrarSugerencias);
 btnEnviarSugerencia?.addEventListener("click", enviarSugerencia);
+// 🎵 Anterior / Siguiente canción
+btnNextTrack?.addEventListener("click", ()=>{
+  userGestureUnlocked = true;
+  nextTrack();
+});
+
+btnPrevTrack?.addEventListener("click", ()=>{
+  userGestureUnlocked = true;
+  prevTrack();
+});
