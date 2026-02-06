@@ -590,3 +590,10 @@ btnPrevTrack?.addEventListener("click", ()=>{
   userGestureUnlocked = true;
   prevTrack();
 });
+
+const btnInstr = document.getElementById("btnInstrucciones");
+const modalInstr = document.getElementById("modalInstrucciones");
+const cerrarInstr = document.getElementById("cerrarInstrucciones");
+
+btnInstr.onclick = () => modalInstr.classList.remove("hidden");
+cerrarInstr.onclick = () => modalInstr.classList.add("hidden");
