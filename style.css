@@ -309,3 +309,32 @@ ol li{margin:8px 0; color:#d8e8f2; line-height:1.25;}
 .musicbar .volbox{
   margin-left: 6px;
 }
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.modal-content {
+  background: #111;
+  color: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  max-width: 420px;
+  width: 90%;
+  text-align: center;
+}
+
+.hidden {
+  display: none;
+}
+
+#btnInstrucciones {
+  font-size: 14px;
+  padding: 6px 10px;
+}
