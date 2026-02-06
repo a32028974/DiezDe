@@ -292,3 +292,20 @@ ol li{margin:8px 0; color:#d8e8f2; line-height:1.25;}
   .btn-start{width:100%;}
   .game-controls{justify-content:stretch;}
 }
+/* ✅ Musicbar abajo */
+.musicbar{
+  margin-top: 12px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  padding: 10px 12px;
+  border-radius: 16px;
+  border:1px solid var(--line);
+  background: rgba(0,0,0,.14);
+}
+
+.musicbar .volbox{
+  margin-left: 6px;
+}
