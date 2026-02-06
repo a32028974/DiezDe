@@ -1,503 +1,450 @@
 /* ==========================
-   DIEZ DE - app.js (FINAL)
-   - PIN Adulto + 1 adulta por ronda
-   - Música espera ON/OFF + fade + recuerda estado
-   - Fullscreen opcional
-   - Terminar ahora
-   - Sugerencias + aprobadas por JSONP (sin CORS)
+   DIEZ DE - app.js (PRO)
+   - Playlist continua /musica
+   - Música: default 40% + slider + ON/OFF
+   - Voz: siempre 100% (speech volume=1)
+   - Offline + Update banner (service worker)
+   - Sugerencias por JSONP (sin CORS)
 ========================== */
 
-// ====== CONFIG ======
-const TIEMPO_ESCRITURA = 80;
-const PAUSA_LECTURA_MS = 800;
-const PAUSA_REPASO_MS = 600;
+// ===== CONFIG =====
+const TIEMPO_ESCRITURA = 70;
+const PAUSA_LECTURA_MS = 700;
+const PAUSA_REPASO_MS = 450;
+
+// Si tu modo adulto usa PIN, dejalo. Si no, podés borrar.
 const ADULTO_PIN = "1971";
 
-// ✅ PEGÁ TU WEBAPP /exec AQUÍ
+// ✅ TU WEBAPP /exec (la que ya tenés)
 const SUGERENCIAS_API_URL = "https://script.google.com/macros/s/AKfycbw_PA0H-NzujxdJwRvykqc_IAlBPLW0lhne0zpgFOTGUn1Fw-G1UYRJ0m4QsSYZQzhEfQ/exec";
 
-// ====== DATA base (consignas.js) ======
-let CONSIGNAS_GENERALES = Array.isArray(window.CONSIGNAS_GENERALES) ? window.CONSIGNAS_GENERALES : [];
-let CONSIGNAS_ADULTO = Array.isArray(window.CONSIGNAS_ADULTO) ? window.CONSIGNAS_ADULTO : [];
+// Música: carpeta /musica (playlist continua)
+const PLAYLIST = [
+  "musica/track1.mp3",
+  "musica/track2.mp3",
+  "musica/track3.mp3",
+  "musica/track4.mp3"
+];
 
-// ====== UI ======
+// ===== DATA base (consignas.js) =====
+let CONSIGNAS_GENERALES = Array.isArray(window.CONSIGNAS_GENERALES) ? window.CONSIGNAS_GENERALES : [];
+let CONSIGNAS_ADULTO   = Array.isArray(window.CONSIGNAS_ADULTO) ? window.CONSIGNAS_ADULTO : [];
+
+// ===== DOM =====
+const elStatus = document.getElementById("status");
+const elListaBox = document.getElementById("listaBox");
+const elLista = document.getElementById("listaConsignas");
 const btnIniciar = document.getElementById("btnIniciar");
 const btnRepetir = document.getElementById("btnRepetir");
-const btnTerminar = document.getElementById("btnTerminar");
 const btnFullscreen = document.getElementById("btnFullscreen");
 const btnAdulto = document.getElementById("btnAdulto");
 const btnMusica = document.getElementById("btnMusica");
+const musicVolume = document.getElementById("musicVolume");
+const musicVolumeLabel = document.getElementById("musicVolumeLabel");
 
-const estado = document.getElementById("estado");
-const timerEl = document.getElementById("timer");
-const vistaLectura = document.getElementById("vistaLectura");
-const vistaRespuesta = document.getElementById("vistaRespuesta");
-const listaEl = document.getElementById("listaConsignas");
+const modal = document.getElementById("modalSugerir");
+const btnSugOpen = document.getElementById("btnSugerirOpen");
+const btnSugClose = document.getElementById("btnSugerirClose");
+const btnSugSend = document.getElementById("btnSugerirSend");
+const sugTexto = document.getElementById("sugTexto");
+const sugCategoria = document.getElementById("sugCategoria");
+const sugMsg = document.getElementById("sugMsg");
 
-const musicaFondo = document.getElementById("musicaFondo");
+// Update banner
+const updateBanner = document.getElementById("updateBanner");
+const btnUpdateNow = document.getElementById("btnUpdateNow");
 
-// Sugerencias (modal)
-const btnSugerirAbrir = document.getElementById("btnSugerirAbrir");
-const modalSugerencia = document.getElementById("modalSugerencia");
-const btnSugerirCerrar = document.getElementById("btnSugerirCerrar");
-const inputSugerencia = document.getElementById("inputSugerencia");
-const selectCategoria = document.getElementById("selectCategoria");
-const btnEnviarSugerencia = document.getElementById("btnEnviarSugerencia");
-const sugerenciaMsg = document.getElementById("sugerenciaMsg");
+// ===== STATE =====
+let modoAdulto = (localStorage.getItem("modoAdulto") === "1");
+let ultimaRondaIds = []; // para no repetir ronda anterior
+let consignasActuales = [];
+let isReading = false;
 
-// ====== STATE ======
-let ronda = [];
-let ultimaRondaIDs = [];
-let timerId = null;
-let wakeLock = null;
+// ===== AUDIO (música) =====
+const MUSIC_KEY_ON = "musicOn";
+const MUSIC_KEY_VOL = "musicVol";
 
-let modoAdultoActivo = false;
-let musicaActiva = false;
+let musicOn = (localStorage.getItem(MUSIC_KEY_ON) ?? "1") === "1"; // auto ON
+let musicVol = Number(localStorage.getItem(MUSIC_KEY_VOL) ?? 0.40); // 40% default
 
-let fadeInterval = null;
+// Audio player (playlist continua)
+const bgm = new Audio();
+bgm.preload = "auto";
+bgm.loop = false; // NO loop: es playlist continua
+bgm.volume = clamp(musicVol, 0, 1);
 
-// ====== helpers ======
-function show(el){ if(el) el.classList.remove("hidden"); }
-function hide(el){ if(el) el.classList.add("hidden"); }
-function limpiarTexto(t){ return String(t || "").replace(/\s+/g," ").trim(); }
+let playlistIndex = Math.floor(Math.random() * PLAYLIST.length);
+let userGestureUnlocked = false;
 
-function shuffle(arr){
-  const a = [...arr];
-  for(let i=a.length-1;i>0;i--){
-    const j = Math.floor(Math.random()*(i+1));
-    [a[i],a[j]] = [a[j],a[i]];
+function loadTrack(i){
+  playlistIndex = (i + PLAYLIST.length) % PLAYLIST.length;
+  bgm.src = PLAYLIST[playlistIndex];
+}
+
+bgm.addEventListener("ended", () => {
+  loadTrack(playlistIndex + 1);
+  if (musicOn && userGestureUnlocked) {
+    bgm.play().catch(()=>{});
   }
-  return a;
-}
+});
 
-function cancelarVoz(){
-  try{ if("speechSynthesis" in window) speechSynthesis.cancel(); }catch(e){}
-}
-function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
-
-function hablar(texto){
-  return new Promise(res=>{
-    if(!("speechSynthesis" in window)){ res(); return; }
-    const u = new SpeechSynthesisUtterance(limpiarTexto(texto));
-    u.lang = "es-AR";
-    u.rate = 1;
-    u.onend = res;
-    u.onerror = res;
-    speechSynthesis.speak(u);
+// ===== SPEECH (voz consignas) =====
+function speak(text){
+  // voz siempre al 100% (el volumen final lo manda el celu)
+  return new Promise((resolve) => {
+    try{
+      window.speechSynthesis.cancel();
+      const ut = new SpeechSynthesisUtterance(text);
+      ut.lang = "es-AR";
+      ut.rate = 1.02;     // un toque ágil
+      ut.pitch = 1.0;
+      ut.volume = 1.0;    // 100%
+      ut.onend = resolve;
+      ut.onerror = resolve;
+      window.speechSynthesis.speak(ut);
+    }catch(e){
+      resolve();
+    }
   });
 }
 
-function renderLectura(items){
-  if(!listaEl) return;
-  listaEl.innerHTML = "";
-  items.forEach(c=>{
-    const li = document.createElement("li");
-    li.textContent = c.texto;
-    listaEl.appendChild(li);
-  });
-}
+// ===== INIT UI =====
+setAdultoUI();
+setMusicUI();
 
-// ====== WakeLock ======
-async function activarWakeLock(){
-  try{
-    if("wakeLock" in navigator){
-      wakeLock = await navigator.wakeLock.request("screen");
+// Slider música
+musicVolume.value = String(Math.round(bgm.volume * 100));
+musicVolumeLabel.textContent = `${musicVolume.value}%`;
+
+musicVolume.addEventListener("input", () => {
+  const v = clamp(Number(musicVolume.value) / 100, 0, 1);
+  bgm.volume = v;
+  musicVolumeLabel.textContent = `${Math.round(v*100)}%`;
+  localStorage.setItem(MUSIC_KEY_VOL, String(v));
+});
+
+// Botón música ON/OFF
+btnMusica.addEventListener("click", async () => {
+  unlockAudioByGesture();
+  musicOn = !musicOn;
+  localStorage.setItem(MUSIC_KEY_ON, musicOn ? "1" : "0");
+  setMusicUI();
+
+  if (musicOn) {
+    ensureBgmReady();
+    bgm.play().catch(()=>{});
+  } else {
+    bgm.pause();
+  }
+});
+
+// Fullscreen
+btnFullscreen.addEventListener("click", () => {
+  unlockAudioByGesture();
+  toggleFullscreen();
+});
+
+// Adulto
+btnAdulto.addEventListener("click", () => {
+  unlockAudioByGesture();
+  if (!modoAdulto) {
+    const pin = prompt("PIN modo adulto:");
+    if (pin !== ADULTO_PIN) {
+      alert("PIN incorrecto.");
+      return;
     }
-  }catch(e){}
-}
-function liberarWakeLock(){
-  try{
-    if(wakeLock){
-      wakeLock.release();
-      wakeLock = null;
-    }
-  }catch(e){}
-}
+    modoAdulto = true;
+  } else {
+    modoAdulto = false;
+  }
+  localStorage.setItem("modoAdulto", modoAdulto ? "1" : "0");
+  setAdultoUI();
+});
 
-// ====== Fullscreen (opcional) ======
-async function toggleFullscreen(){
-  try{
-    if(!document.fullscreenElement){
-      await document.documentElement.requestFullscreen();
-    }else{
-      await document.exitFullscreen();
-    }
-  }catch(e){}
-}
-function setBtnFullscreenUI(){
-  if(!btnFullscreen) return;
-  const enFS = !!document.fullscreenElement;
-  btnFullscreen.innerHTML = `
-    <span class="fs-ico" aria-hidden="true">
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
-        <path d="M14 4h6v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        <path d="M20 4l-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        <path d="M10 20H4v-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        <path d="M4 20l7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-      </svg>
-    </span>
-    ${enFS ? "Salir Fullscreen" : "Fullscreen"}
-  `;
-}
+// Iniciar ronda
+btnIniciar.addEventListener("click", async () => {
+  unlockAudioByGesture();
+  if (isReading) return;
 
-// ====== Música (espera) + fade + recuerda estado ======
-function setBtnMusicaUI(){
-  if(!btnMusica) return;
-  btnMusica.setAttribute("aria-pressed", musicaActiva ? "true" : "false");
-  btnMusica.textContent = musicaActiva ? "🔊 Música" : "🎵 Música";
-}
+  // Música automática: si está ON, intentamos arrancar al iniciar ronda
+  if (musicOn) {
+    ensureBgmReady();
+    bgm.play().catch(()=>{});
+  }
 
-function fadeTo(target, ms = 350){
-  if(!musicaFondo) return;
-  clearInterval(fadeInterval);
+  await iniciarRonda();
+});
 
-  const start = typeof musicaFondo.volume === "number" ? musicaFondo.volume : 0;
-  const steps = 18;
-  const stepMs = Math.max(12, Math.floor(ms / steps));
-  let i = 0;
+// Repetir consignas
+btnRepetir.addEventListener("click", async () => {
+  unlockAudioByGesture();
+  if (isReading) return;
+  await leerConsignasActuales();
+});
 
-  fadeInterval = setInterval(()=>{
-    i++;
-    const v = start + (target - start) * (i / steps);
-    musicaFondo.volume = Math.max(0, Math.min(1, v));
+// Modal sugerir
+btnSugOpen.addEventListener("click", () => openModal(true));
+btnSugClose.addEventListener("click", () => openModal(false));
+modal.addEventListener("click", (e) => { if (e.target === modal) openModal(false); });
 
-    if(i >= steps){
-      clearInterval(fadeInterval);
-      fadeInterval = null;
-      if(target === 0) musicaFondo.pause();
-    }
-  }, stepMs);
-}
+btnSugSend.addEventListener("click", async () => {
+  unlockAudioByGesture();
+  await enviarSugerencia();
+});
 
-function playMusica(){
-  if(!musicaFondo) return;
-  musicaFondo.volume = 0;
-  musicaFondo.play().catch(()=>{});
-  fadeTo(0.25, 450);
-}
-function pauseMusica(){
-  if(!musicaFondo) return;
-  fadeTo(0, 250);
-}
-
-function toggleMusica(){
-  musicaActiva = !musicaActiva;
-  localStorage.setItem("diezde_musica", musicaActiva ? "1" : "0");
-  setBtnMusicaUI();
-  if(musicaActiva) playMusica();
-  else pauseMusica();
-}
-
-function restoreMusicaPref(){
-  musicaActiva = localStorage.getItem("diezde_musica") === "1";
-  setBtnMusicaUI();
-  // Ojo: por políticas del celu, solo va a sonar cuando el usuario toque algo alguna vez.
-  // Igual lo dejamos listo.
-}
-
-// ====== Modo Adulto con PIN ======
+// ===== FUNCTIONS =====
 function setAdultoUI(){
-  if(!btnAdulto) return;
-  btnAdulto.setAttribute("aria-pressed", modoAdultoActivo ? "true" : "false");
-  btnAdulto.textContent = modoAdultoActivo ? "🔥 Adulto" : "🔒 Adulto";
+  btnAdulto.textContent = modoAdulto ? "🔓 Adulto" : "🔒 Adulto";
 }
-function pedirPINyToggleAdulto(){
-  const pin = prompt("Ingresá PIN para Modo Adulto:");
-  if(pin === null) return;
 
-  if(pin.trim() === ADULTO_PIN){
-    modoAdultoActivo = !modoAdultoActivo;
-    setAdultoUI();
-    if(estado){
-      estado.textContent = modoAdultoActivo
-        ? "Modo Adulto ACTIVADO (1 por ronda)"
-        : "Modo Adulto DESACTIVADO";
-    }
-  }else{
-    if(estado) estado.textContent = "PIN incorrecto ❌";
+function setMusicUI(){
+  btnMusica.classList.toggle("btn-green", musicOn);
+  btnMusica.textContent = musicOn ? "🎵 Música ON" : "🎵 Música OFF";
+}
+
+function ensureBgmReady(){
+  if (!bgm.src) loadTrack(playlistIndex);
+  bgm.volume = clamp(Number(localStorage.getItem(MUSIC_KEY_VOL) ?? bgm.volume), 0, 1);
+}
+
+function unlockAudioByGesture(){
+  // Chrome móvil: audio sólo después de gesto del usuario
+  if (!userGestureUnlocked) {
+    userGestureUnlocked = true;
+    try { bgm.muted = false; } catch(e){}
   }
 }
 
-// ====== Selección ronda ======
-function normalizarLista(base, categoria){
-  return (Array.isArray(base)? base : [])
-    .map(x => ({
-      id: Number(x.id),
-      texto: limpiarTexto(x.texto),
-      categoria
-    }))
-    .filter(x => x.id && x.texto.length > 0);
-}
-
-function seleccionarRonda(){
-  const generales = normalizarLista(CONSIGNAS_GENERALES, "GENERAL");
-  const adultas = normalizarLista(CONSIGNAS_ADULTO, "ADULTO");
-
-  const cantGeneral = modoAdultoActivo ? 9 : 10;
-  const cantAdulto = modoAdultoActivo ? 1 : 0;
-
-  let poolGeneral = generales.filter(c => !ultimaRondaIDs.includes(c.id));
-  if(poolGeneral.length < cantGeneral) poolGeneral = generales;
-
-  let seleccion = shuffle(poolGeneral).slice(0, cantGeneral);
-
-  if(cantAdulto === 1 && adultas.length > 0){
-    const una = shuffle(adultas).slice(0,1);
-    seleccion = [...seleccion, ...una];
-  }
-
-  seleccion = shuffle(seleccion);
-  ultimaRondaIDs = seleccion.map(c => c.id);
-  return seleccion;
-}
-
-// ====== Timer ======
-function detenerTimer(){
-  if(timerId){
-    clearInterval(timerId);
-    timerId = null;
-  }
-}
-
-function iniciarTimer(){
-  detenerTimer();
-  let t = TIEMPO_ESCRITURA;
-  if(timerEl) timerEl.textContent = t;
-
-  timerId = setInterval(()=>{
-    t--;
-    if(timerEl) timerEl.textContent = t;
-    if(t <= 0){
-      detenerTimer();
-      terminarRonda();
-    }
-  }, 1000);
-}
-
-// ====== Flujo ======
 async function iniciarRonda(){
-  if(!Array.isArray(CONSIGNAS_GENERALES) || CONSIGNAS_GENERALES.length < 10){
-    if(estado) estado.textContent = "Faltan consignas generales (revisá consignas.js)";
+  const poolGeneral = CONSIGNAS_GENERALES.slice();
+  const poolAdulto = CONSIGNAS_ADULTO.slice();
+
+  if (!poolGeneral.length) {
+    setStatus("No hay consignas. Revisá consignas.js");
     return;
   }
 
-  cancelarVoz();
-  pauseMusica();
+  // Elegimos 10 generales
+  const elegidas = pickRandomUnique(poolGeneral, 10, ultimaRondaIds);
 
-  await activarWakeLock();
+  // Si modo adulto, metemos 1 adulta por ronda (si hay)
+  if (modoAdulto && poolAdulto.length) {
+    const adulta = pickRandomUnique(poolAdulto, 1, ultimaRondaIds)[0];
+    // la metemos en una posición random
+    const pos = Math.floor(Math.random() * (elegidas.length + 1));
+    elegidas.splice(pos, 0, adulta);
+    // y dejamos 10 total -> sacamos una general random si quedamos en 11
+    if (elegidas.length > 10) {
+      const idxToRemove = pos === 0 ? elegidas.length - 1 : 0;
+      elegidas.splice(idxToRemove, 1);
+    }
+  }
 
-  ronda = seleccionarRonda();
-  renderLectura(ronda);
+  consignasActuales = elegidas;
+  ultimaRondaIds = elegidas.map(x => x.id);
 
-  show(vistaLectura);
-  hide(vistaRespuesta);
-  show(timerEl);
-  hide(btnTerminar);
+  renderLista(elegidas);
+  await leerConsignasActuales();
+}
 
-  if(estado) estado.textContent = "Escuchá…";
+function renderLista(arr){
+  elLista.innerHTML = "";
+  arr.forEach((c) => {
+    const li = document.createElement("li");
+    li.textContent = c.texto;
+    elLista.appendChild(li);
+  });
+  elListaBox.classList.remove("hidden");
+  setStatus("Ronda lista.");
+}
 
-  for(let i=0;i<ronda.length;i++){
-    await hablar(`${i+1}. ${ronda[i].texto}`);
+async function leerConsignasActuales(){
+  if (!consignasActuales.length) return;
+
+  isReading = true;
+  setStatus("Escuchá...");
+
+  for (let i=0; i<consignasActuales.length; i++){
+    const n = i + 1;
+    const t = consignasActuales[i].texto;
+    // lectura ágil
+    await speak(`${n}. ${t}`);
     await sleep(PAUSA_LECTURA_MS);
   }
 
-  await hablar("Repasamos");
-  for(const c of ronda){
-    await hablar(c.texto);
-    await sleep(PAUSA_REPASO_MS);
-  }
-
-  hide(vistaLectura);
-  show(vistaRespuesta);
-  show(btnTerminar);
-  if(estado) estado.textContent = "¡A escribir de memoria!";
-  iniciarTimer();
+  setStatus("Listo ✅");
+  isReading = false;
 }
 
-function terminarRonda(){
-  detenerTimer();
-  cancelarVoz();
-
-  hide(vistaRespuesta);
-  show(vistaLectura);
-  renderLectura(ronda);
-
-  hide(btnTerminar);
-  if(estado) estado.textContent = "Tiempo – corrigen respuestas";
-
-  liberarWakeLock();
-
-  if(musicaActiva) playMusica();
-  hablar("Tiempo");
+function setStatus(msg){
+  elStatus.textContent = msg;
 }
 
-async function repetirConsignas(){
-  if(!ronda || ronda.length === 0) return;
-  cancelarVoz();
-  pauseMusica();
-
-  await hablar("Repasamos");
-  for(const c of ronda){
-    await hablar(c.texto);
-    await sleep(PAUSA_REPASO_MS);
+function openModal(show){
+  if (show) {
+    modal.classList.remove("hidden");
+    modal.setAttribute("aria-hidden", "false");
+    sugMsg.className = "msg";
+    sugMsg.textContent = "";
+    sugTexto.focus();
+  } else {
+    modal.classList.add("hidden");
+    modal.setAttribute("aria-hidden", "true");
   }
 }
 
-// ====== JSONP (SIN CORS) ======
-function jsonp(url, timeoutMs = 9000){
-  return new Promise((resolve, reject)=>{
-    const cb = `cb_${Date.now()}_${Math.floor(Math.random()*99999)}`;
+// ===== SUGERENCIAS (JSONP) =====
+async function enviarSugerencia(){
+  const texto = (sugTexto.value || "").trim();
+  const categoria = (sugCategoria.value || "GENERAL").trim();
 
-    const cleanup = ()=>{
-      try{ delete window[cb]; }catch(e){}
-      if(script && script.parentNode) script.parentNode.removeChild(script);
-      clearTimeout(to);
-    };
+  sugMsg.className = "msg";
+  sugMsg.textContent = "";
 
-    window[cb] = (data)=>{
+  if (texto.length < 3) {
+    sugMsg.classList.add("err");
+    sugMsg.textContent = "Escribí una consigna (mínimo 3 caracteres).";
+    return;
+  }
+
+  btnSugSend.disabled = true;
+  btnSugSend.textContent = "Enviando...";
+
+  try{
+    // JSONP: crea <script> y espera callback
+    const res = await jsonp(SUGERENCIAS_API_URL, {
+      action: "sugerir",
+      texto,
+      categoria
+    }, 12000);
+
+    // Esperamos {ok:true} o {status:"ok"} etc
+    const ok = !!(res && (res.ok === true || res.status === "ok" || res.result === "ok"));
+
+    if (ok) {
+      sugMsg.className = "msg ok";
+      sugMsg.textContent = "¡Enviado! Gracias 🙌";
+      sugTexto.value = "";
+      setTimeout(() => openModal(false), 600);
+    } else {
+      sugMsg.className = "msg err";
+      sugMsg.textContent = "No se pudo enviar. Revisá el endpoint /exec (ver explicación abajo).";
+    }
+  }catch(e){
+    sugMsg.className = "msg err";
+    sugMsg.textContent = "No se pudo enviar. Probá otra vez.";
+  }finally{
+    btnSugSend.disabled = false;
+    btnSugSend.textContent = "Enviar";
+  }
+}
+
+function jsonp(url, params={}, timeoutMs=8000){
+  return new Promise((resolve, reject) => {
+    const cbName = "__cb_" + Math.random().toString(36).slice(2);
+    const script = document.createElement("script");
+    const sep = url.includes("?") ? "&" : "?";
+
+    const query = new URLSearchParams({
+      ...params,
+      callback: cbName
+    }).toString();
+
+    let timer = setTimeout(() => {
+      cleanup();
+      reject(new Error("timeout"));
+    }, timeoutMs);
+
+    function cleanup(){
+      if (timer) clearTimeout(timer);
+      timer = null;
+      try{ delete window[cbName]; }catch(e){}
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    window[cbName] = (data) => {
       cleanup();
       resolve(data);
     };
 
-    const script = document.createElement("script");
-    script.src = url + (url.includes("?") ? "&" : "?") + "callback=" + encodeURIComponent(cb);
-    script.onerror = ()=>{
+    script.onerror = () => {
       cleanup();
-      reject(new Error("jsonp_error"));
+      reject(new Error("script error"));
     };
 
-    const to = setTimeout(()=>{
-      cleanup();
-      reject(new Error("jsonp_timeout"));
-    }, timeoutMs);
-
-    document.head.appendChild(script);
+    script.src = url + sep + query;
+    document.body.appendChild(script);
   });
 }
 
-// ====== Sugerencias ======
-function abrirSugerencias(){
-  if(!modalSugerencia) return;
-  if(inputSugerencia) inputSugerencia.value = "";
-  if(selectCategoria) selectCategoria.value = "GENERAL";
-  if(sugerenciaMsg) { sugerenciaMsg.classList.add("hidden"); sugerenciaMsg.textContent=""; }
-  show(modalSugerencia);
-  setTimeout(()=>{ try{ inputSugerencia?.focus(); }catch(e){} }, 50);
-}
+// ===== UTIL =====
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
 
-function cerrarSugerencias(){
-  hide(modalSugerencia);
-}
+function pickRandomUnique(arr, count, avoidIds=[]){
+  const avoidSet = new Set(avoidIds || []);
+  const filtered = arr.filter(x => !avoidSet.has(x.id));
+  const src = (filtered.length >= count) ? filtered : arr.slice(); // si no alcanza, permitimos repetir
 
-function msgSugerencia(texto){
-  if(!sugerenciaMsg) return;
-  sugerenciaMsg.textContent = texto;
-  sugerenciaMsg.classList.remove("hidden");
-}
-
-async function enviarSugerencia(){
-  const texto = limpiarTexto(inputSugerencia?.value);
-  const categoria = (selectCategoria?.value || "GENERAL").toUpperCase();
-
-  if(texto.length < 4){
-    msgSugerencia("Escribí una consigna un poquito más larga 🙂");
-    return;
+  // shuffle simple
+  for (let i = src.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [src[i], src[j]] = [src[j], src[i]];
   }
 
-  if(!SUGERENCIAS_API_URL || SUGERENCIAS_API_URL.includes("PEGAR_ACA")){
-    msgSugerencia("Falta configurar la URL de sugerencias (Apps Script).");
-    return;
+  return src.slice(0, Math.min(count, src.length));
+}
+
+function toggleFullscreen(){
+  const doc = document;
+  const el = document.documentElement;
+  if (!doc.fullscreenElement) {
+    el.requestFullscreen?.();
+  } else {
+    doc.exitFullscreen?.();
   }
+}
 
-  msgSugerencia("Enviando…");
+// ===== SERVICE WORKER + UPDATE BANNER =====
+let newSW = null;
 
-  const url =
-    `${SUGERENCIAS_API_URL}?action=sugerir` +
-    `&texto=${encodeURIComponent(texto)}` +
-    `&categoria=${encodeURIComponent(categoria)}`;
+function showUpdateBanner(){
+  if (!updateBanner || !btnUpdateNow) return;
+  updateBanner.classList.remove("hidden");
+  btnUpdateNow.onclick = () => {
+    if (newSW) newSW.postMessage({ type: "SKIP_WAITING" });
+    location.reload();
+  };
+}
 
-  try{
-    const data = await jsonp(url);
-    if(data && data.ok){
-      msgSugerencia("¡Listo! Te llegó para aprobar ✅");
-      if(inputSugerencia) inputSugerencia.value = "";
-    }else{
-      msgSugerencia("No se pudo enviar. Probá otra vez.");
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", async () => {
+    try{
+      const reg = await navigator.serviceWorker.register("./sw.js");
+
+      // Si hay uno waiting, ya hay update
+      if (reg.waiting) {
+        newSW = reg.waiting;
+        showUpdateBanner();
+      }
+
+      reg.addEventListener("updatefound", () => {
+        const sw = reg.installing;
+        if (!sw) return;
+
+        sw.addEventListener("statechange", () => {
+          if (sw.state === "installed" && navigator.serviceWorker.controller) {
+            newSW = sw;
+            showUpdateBanner();
+          }
+        });
+      });
+
+      // Opcional: chequea updates cada 5 min si la app queda abierta
+      setInterval(() => reg.update(), 5 * 60 * 1000);
+
+    }catch(e){
+      // sin drama
     }
-  }catch(e){
-    msgSugerencia("Error de conexión. Probá otra vez.");
-  }
-}
-
-// ====== Cargar aprobadas ======
-async function cargarAprobadas(){
-  if(!SUGERENCIAS_API_URL || SUGERENCIAS_API_URL.includes("PEGAR_ACA")) return;
-
-  try{
-    const urlG = `${SUGERENCIAS_API_URL}?action=aprobadas&cat=GENERAL`;
-    const urlA = `${SUGERENCIAS_API_URL}?action=aprobadas&cat=ADULTO`;
-
-    const [g,a] = await Promise.all([
-      jsonp(urlG).catch(()=>[]),
-      jsonp(urlA).catch(()=>[])
-    ]);
-
-    // merge sin duplicar
-    const baseG = new Map((CONSIGNAS_GENERALES||[]).map(x => [Number(x.id), x]));
-    (Array.isArray(g)?g:[]).forEach(x=>{
-      const id = Number(x.id);
-      const texto = limpiarTexto(x.texto);
-      if(id && texto && !baseG.has(id)) baseG.set(id, {id, texto});
-    });
-    CONSIGNAS_GENERALES = Array.from(baseG.values());
-
-    const baseA = new Map((CONSIGNAS_ADULTO||[]).map(x => [Number(x.id), x]));
-    (Array.isArray(a)?a:[]).forEach(x=>{
-      const id = Number(x.id);
-      const texto = limpiarTexto(x.texto);
-      if(id && texto && !baseA.has(id)) baseA.set(id, {id, texto});
-    });
-    CONSIGNAS_ADULTO = Array.from(baseA.values());
-
-  }catch(e){}
-}
-
-// ====== INIT ======
-(function init(){
-  if(timerEl) timerEl.textContent = TIEMPO_ESCRITURA;
-  setAdultoUI();
-  setBtnFullscreenUI();
-  restoreMusicaPref();
-  setBtnMusicaUI();
-
-  // carga aprobadas al entrar
-  cargarAprobadas();
-
-  // modal: cerrar tocando el fondo
-  modalSugerencia?.addEventListener("click", (ev)=>{
-    if(ev.target === modalSugerencia) cerrarSugerencias();
   });
-})();
-
-// ====== EVENTS ======
-btnIniciar?.addEventListener("click", iniciarRonda);
-btnRepetir?.addEventListener("click", repetirConsignas);
-btnTerminar?.addEventListener("click", terminarRonda);
-
-btnAdulto?.addEventListener("click", pedirPINyToggleAdulto);
-
-btnFullscreen?.addEventListener("click", toggleFullscreen);
-document.addEventListener("fullscreenchange", setBtnFullscreenUI);
-
-btnMusica?.addEventListener("click", toggleMusica);
-
-// para que si el usuario ya dejó música ON, se active al primer toque en la pantalla
-document.addEventListener("click", ()=>{
-  if(musicaActiva && musicaFondo && musicaFondo.paused){
-    playMusica();
-  }
-},{ once:true });
-
-btnSugerirAbrir?.addEventListener("click", abrirSugerencias);
-btnSugerirCerrar?.addEventListener("click", cerrarSugerencias);
-btnEnviarSugerencia?.addEventListener("click", enviarSugerencia);
+}
