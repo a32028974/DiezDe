@@ -208,17 +208,4 @@ window.CONSIGNAS_GENERALES = [
   { id: 185, texto: "Un equipo de fútbol argentino", categoria: "GENERAL" },
   { id: 186, texto: "Un equipo de fútbol europeo", categoria: "GENERAL" },  
   { id: 187, texto: "Un equipo de fútbol europeo", categoria: "GENERAL" },  
-];
-
-window.CONSIGNAS_ADULTO = [
-  { id: 1001, texto: "Algo que se venda en un sexshop", categoria: "ADULTO" },
-  { id: 1002, texto: "Un lugar para hacer "eso"", categoria: "ADULTO" },
-  { id: 1003, texto: "Un lugar del cuerpo donde darías un beso", categoria: "ADULTO" },
-  { id: 1004, texto: "Una frase de chamuyo", categoria: "ADULTO" },
-  { id: 1005, texto: "Una cosa que harías si nadie se entera", categoria: "ADULTO" },
-  { id: 1006, texto: "Algo que te resulta sexy (sin decir personas)", categoria: "ADULTO" },
-  { id: 1007, texto: "Una situación incómoda de pareja", categoria: "ADULTO" },
-  { id: 1008, texto: "Un secreto “chiquito”", categoria: "ADULTO" },
-  { id: 1009, texto: "Algo que te pone nervioso/a", categoria: "ADULTO" },
-  { id: 1010, texto: "Una posición en la cama", categoria: "ADULTO" },
-];
+ ];
