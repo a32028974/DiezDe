@@ -1,4 +1,4 @@
-const VERSION = "2026-02-05-2";
+const VERSION = "2026-02-06-1";
 const CACHE_NAME = `diezde-${VERSION}`;
 
 const APP_SHELL = [
@@ -7,8 +7,10 @@ const APP_SHELL = [
   "./style.css",
   "./app.js",
   "./consignas.js",
+  "./sw.js",
+];
 
-  // cache de música (ajustá si usás menos/más)
+const OPTIONAL_ASSETS = [
   "./musica/track1.mp3",
   "./musica/track2.mp3",
   "./musica/track3.mp3",
@@ -16,8 +18,19 @@ const APP_SHELL = [
 ];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)));
-  self.skipWaiting();
+  event.waitUntil((async ()=>{
+    const cache = await caches.open(CACHE_NAME);
+
+    // ✅ Shell obligatorio
+    await cache.addAll(APP_SHELL);
+
+    // ✅ Opcionales (no rompen si faltan)
+    for (const url of OPTIONAL_ASSETS) {
+      try { await cache.add(url); } catch (e) {}
+    }
+
+    self.skipWaiting();
+  })());
 });
 
 self.addEventListener("activate", (event) => {
@@ -35,6 +48,7 @@ self.addEventListener("message", (event) => {
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   const url = new URL(req.url);
+
   if (req.method !== "GET") return;
   if (url.origin !== location.origin) return;
 
@@ -52,7 +66,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // MP3 e imágenes: cache-first
+  // resto: cache-first
   event.respondWith(cacheFirst(req));
 });
 
@@ -82,6 +96,7 @@ async function staleWhileRevalidate(req){
 async function cacheFirst(req){
   const cached = await caches.match(req);
   if (cached) return cached;
+
   const fresh = await fetch(req);
   const cache = await caches.open(CACHE_NAME);
   cache.put(req, fresh.clone());
