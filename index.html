@@ -1,111 +1,106 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Diez De</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="style.css" />
+
+  <link rel="icon" type="image/png" href="logo_muy_chico_sinfondo.png" />
+  <link rel="stylesheet" href="style.css?v=2026-02-05-1" />
 </head>
+
 <body>
-
-<div class="app">
-  <header class="top">
-    <h1 class="title">🎲 Diez DE</h1>
-
-    <div class="controls">
-      <button id="btnAdulto" class="btn btn-sec" type="button" aria-pressed="false" title="Modo Adulto (PIN)">
-        🔒 Adulto
-      </button>
-
-      <button id="btnFullscreen" class="btn btn-sec btn-fs" type="button" title="Pantalla completa">
-        <span class="fs-ico" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
-            <path d="M14 4h6v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <path d="M20 4l-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <path d="M10 20H4v-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <path d="M4 20l7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-        </span>
-        Fullscreen
-      </button>
-
-      <button id="btnMusica" class="btn btn-sec" type="button" aria-pressed="false" title="Música de espera">
-        🎵 Música
-      </button>
-
-      <button id="btnIniciar" class="btn btn-primary" type="button">
-        Iniciar ronda
-      </button>
+  <!-- Banner Update -->
+  <div id="updateBanner" class="update-banner hidden">
+    <div class="update-left">
+      <span class="dot"></span>
+      <span>Hay una actualización disponible.</span>
     </div>
+    <button id="btnUpdateNow" class="btn btn-green">Actualizar</button>
+  </div>
 
-    <div id="estado" class="estado">Listos para jugar</div>
-  </header>
+  <main class="wrap">
+    <header class="top">
+      <div class="brand">
+        <span class="dice">🎲</span>
+        <h1>Diez <span class="de">De</span></h1>
+      </div>
 
-  <!-- LECTURA -->
-  <section id="vistaLectura" class="panel hidden">
-    <h2 class="subtitle">Escuchá y mirá 👀🔊</h2>
-    <ol id="listaConsignas" class="lista"></ol>
+      <div class="toolbar">
+        <button id="btnAdulto" class="btn btn-dark" type="button">🔒 Adulto</button>
+        <button id="btnFullscreen" class="btn btn-dark" type="button">⤢ Fullscreen</button>
 
-    <div class="row">
-      <button id="btnRepetir" class="btn btn-sec" type="button">🔁 Repetir</button>
-      <button id="btnSugerirAbrir" class="btn btn-sec" type="button">💡 Sugerir</button>
-    </div>
-  </section>
+        <button id="btnMusica" class="btn btn-dark" type="button">🎵 Música</button>
 
-  <!-- RESPUESTA -->
-  <section id="vistaRespuesta" class="panel hidden">
-    <h2 class="subtitle">Escriban de memoria ✍️</h2>
-    <div class="bloqueo">🔒 Consignas ocultas</div>
-  </section>
+        <div class="volbox" title="Volumen música">
+          <span>🔉</span>
+          <input id="musicVolume" type="range" min="0" max="100" value="40" />
+          <span id="musicVolumeLabel">40%</span>
+        </div>
+      </div>
+    </header>
 
-  <!-- TIMER -->
-  <div id="timer" class="timer hidden">90</div>
-  <button id="btnTerminar" class="btn btn-sec hidden" type="button">⏹️ Terminar ahora</button>
+    <section class="panel">
+      <button id="btnIniciar" class="btn btn-big btn-green" type="button">Iniciar ronda</button>
 
-  <!-- MODAL SUGERENCIAS -->
-  <div id="modalSugerencia" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="ms-title">
+      <div id="status" class="status">Listos para jugar</div>
+
+      <div id="listaBox" class="lista hidden">
+        <div class="lista-title">
+          <div class="pill">Escuchá y mirá 👀 🔊</div>
+          <button id="btnRepetir" class="btn btn-dark btn-sm" type="button">🔁 Repetir</button>
+        </div>
+        <ol id="listaConsignas"></ol>
+
+        <div class="actions-row">
+          <button id="btnSugerirOpen" class="btn btn-dark" type="button">💡 Sugerir consigna</button>
+        </div>
+      </div>
+
+      <div class="footer-badge">
+        <span class="badge-dot"></span>
+        <span>FrecWD</span>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal sugerir -->
+  <div id="modalSugerir" class="modal hidden" aria-hidden="true">
     <div class="modal-card">
       <div class="modal-head">
-        <div id="ms-title" class="modal-title">💡 Sugerir consigna</div>
-        <button id="btnSugerirCerrar" class="btn btn-x" type="button" aria-label="Cerrar">✕</button>
+        <div class="modal-title">💡 Sugerir consigna</div>
+        <button id="btnSugerirClose" class="btn-x" type="button">×</button>
       </div>
 
-      <label class="label">Consigna</label>
-      <input id="inputSugerencia" class="input" maxlength="80" placeholder="Ej: Una comida típica" />
+      <div class="modal-body">
+        <label class="lbl">Consigna</label>
+        <input id="sugTexto" class="inp" type="text" placeholder="Ej: Algo salado" maxlength="120" />
 
-      <label class="label">Categoría</label>
-      <select id="selectCategoria" class="select">
-        <option value="GENERAL">General</option>
-        <option value="ADULTO">Adulto</option>
-      </select>
+        <label class="lbl">Categoría</label>
+        <select id="sugCategoria" class="inp">
+          <option value="GENERAL">General</option>
+          <option value="COMIDA">Comida</option>
+          <option value="OBJETO">Objeto</option>
+          <option value="LUGAR">Lugar</option>
+          <option value="PERSONAJE">Personaje</option>
+          <option value="OTRO">Otro</option>
+        </select>
 
-      <div class="hint">
-        Esto te llega a vos para aprobar. Si aprobás, se suma al juego automáticamente.
+        <p class="help">
+          Esto te llega a vos para aprobar. Si aprobás, se suma al juego automáticamente.
+        </p>
+
+        <div class="modal-actions">
+          <button id="btnSugerirSend" class="btn btn-green" type="button">Enviar</button>
+        </div>
+
+        <div id="sugMsg" class="msg"></div>
       </div>
-
-      <div class="row right">
-        <button id="btnEnviarSugerencia" class="btn btn-primary" type="button">Enviar</button>
-      </div>
-
-      <div id="sugerenciaMsg" class="msg hidden"></div>
     </div>
   </div>
 
-  <!-- Footer FrecWD -->
-  <footer class="frecwd-footer">
-    <a class="frecwd-badge" href="https://wa.me/5491136065609" target="_blank" rel="noopener">
-      <span class="frecwd-dot" aria-hidden="true"></span>
-      <span class="frecwd-text">FrecWD</span>
-    </a>
-  </footer>
-</div>
-
-<!-- Audio de espera (local) -->
-<audio id="musicaFondo" loop preload="auto">
-  <source src="musica.mp3" type="audio/mpeg">
-</audio>
-
-<script src="consignas.js"></script>
-<script src="app.js"></script>
+  <!-- Tus consignas -->
+  <script src="consignas.js?v=2026-02-05-1"></script>
+  <script src="app.js?v=2026-02-05-1"></script>
 </body>
 </html>
