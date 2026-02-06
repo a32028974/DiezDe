@@ -323,7 +323,7 @@ async function enviarSugerencia(){
 
     if (ok) {
       sugMsg.className = "msg ok";
-      sugMsg.textContent = "¡Enviado! Gracias 🙌";
+      sugMsg.textContent = "¡Gracias por la sugerencia! 🙌 La vamos a revisar.";
       sugTexto.value = "";
       setTimeout(() => openModal(false), 600);
     } else {
@@ -332,7 +332,7 @@ async function enviarSugerencia(){
     }
   }catch(e){
     sugMsg.className = "msg err";
-    sugMsg.textContent = "No se pudo enviar. Probá otra vez.";
+    sugMsg.textContent = "No se pudo enviar ahora 😕. Probá de nuevo en un momento.";
   }finally{
     btnSugSend.disabled = false;
     btnSugSend.textContent = "Enviar";
