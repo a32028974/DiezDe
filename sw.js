@@ -15,9 +15,7 @@ const APP_SHELL = [
   "./musica/track1.mp3",
   "./musica/track2.mp3",
   "./musica/track3.mp3",
-  "./musica/track4.mp3",
-  "./musica/track5.mp3",
-  "./musica/track6.mp3"
+  "./musica/track4.mp3"
 ];
 
 self.addEventListener("install", (event) => {
