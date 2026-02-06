@@ -35,18 +35,11 @@
         <h1>Diez <span class="de">De</span></h1>
       </div>
 
-      <!-- Toolbar (solo fullscreen + música) -->
+      <!-- Toolbar (solo fullscreen) -->
       <div class="toolbar">
-        <button id="btnFullscreen" class="btn btn-dark" type="button">Fullscreen</button>
+  <button id="btnFullscreen" class="btn btn-dark" type="button">Fullscreen</button>
+</div>
 
-        <button id="btnMusica" class="btn btn-dark" type="button">🎵 Música</button>
-
-        <div class="volbox" title="Volumen música">
-          <span>🔉</span>
-          <input id="musicVolume" type="range" min="0" max="100" value="15" />
-          <span id="musicVolumeLabel">15%</span>
-        </div>
-      </div>
     </header>
 
     <!-- Acción principal arriba -->
@@ -79,6 +72,20 @@
           <div id="timer" class="timer">70</div>
         </div>
       </div>
+<!-- ✅ Barra de Música (abajo) -->
+<div class="musicbar">
+  <button id="btnPrevTrack" class="btn btn-dark btn-sm" type="button">⏮</button>
+
+  <button id="btnMusica" class="btn btn-dark btn-sm" type="button">🎵 Música</button>
+
+  <button id="btnNextTrack" class="btn btn-dark btn-sm" type="button">⏭</button>
+
+  <div class="volbox" title="Volumen música">
+    <span>🔉</span>
+    <input id="musicVolume" type="range" min="0" max="100" value="15" />
+    <span id="musicVolumeLabel">15%</span>
+  </div>
+</div>
 
       <a class="footer-badge" href="https://wa.me/5491136065609" target="_blank" rel="noopener">
         <span class="badge-dot"></span>
