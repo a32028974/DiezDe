@@ -1,456 +1,615 @@
 /* ==========================
-   DIEZ DE - app.js (FINAL)
+   DIEZ DE - app.js (FINAL + REVISADO)
+   - Tu flujo original intacto (vista lectura / respuesta + timer + terminar + repetir + wakeLock)
+   - UI nueva: Iniciar arriba; Repetir/Sugerir/Terminar fuera del cuadro de consignas
    - PIN Adulto + 1 adulta por ronda
-   - Música ON/OFF + fade + recuerda ON/OFF
-   - Volumen SIEMPRE arranca en 15%
+   - Música: playlist /musica + fade + ON/OFF (recuerda estado)
+   - Volumen: SIEMPRE arranca 15% (no recuerda vol)
    - Fullscreen opcional
-   - Terminar ahora
    - Sugerencias + aprobadas por JSONP (sin CORS)
+   - Banner "Hay actualización disponible" (SW)
 ========================== */
 
 // ====== CONFIG ======
-const TIEMPO_ESCRITURA = 80;
-const PAUSA_LECTURA_MS = 800;
-const PAUSA_REPASO_MS = 600;
-
+const TIEMPO_ESCRITURA = 70;
+const PAUSA_LECTURA_MS = 650;
+const PAUSA_REPASO_MS = 500;
 const ADULTO_PIN = "1971";
 
 // ✅ PEGÁ TU WEBAPP /exec AQUÍ
 const SUGERENCIAS_API_URL = "https://script.google.com/macros/s/AKfycbw_PA0H-NzujxdJwRvykqc_IAlBPLW0lhne0zpgFOTGUn1Fw-G1UYRJ0m4QsSYZQzhEfQ/exec";
 
-// ✅ Volumen default SIEMPRE
-const DEFAULT_VOL = 0.15;
+// ✅ Playlist (carpeta /musica)
+const PLAYLIST = [
+  "musica/track1.mp3",
+  "musica/track2.mp3",
+  "musica/track3.mp3",
+  "musica/track4.mp3",
+];
+
+// Música: recuerda ON/OFF, pero VOL SIEMPRE 15%
+const MUSIC_ON_KEY = "diezde_musica";
+const DEFAULT_MUSIC_VOL = 0.15;
 
 // ====== DATA base (consignas.js) ======
 let CONSIGNAS_GENERALES = Array.isArray(window.CONSIGNAS_GENERALES) ? window.CONSIGNAS_GENERALES : [];
-let CONSIGNAS_ADULTO    = Array.isArray(window.CONSIGNAS_ADULTO)    ? window.CONSIGNAS_ADULTO    : [];
+let CONSIGNAS_ADULTO = Array.isArray(window.CONSIGNAS_ADULTO) ? window.CONSIGNAS_ADULTO : [];
 
-// Fallback (por si te olvidás de cargar consignas.js)
-if (CONSIGNAS_GENERALES.length === 0) {
-  CONSIGNAS_GENERALES = [
-    "Un color",
-    "Un animal",
-    "Algo de la cocina",
-    "Una marca",
-    "Un país",
-    "Una película",
-    "Una comida",
-    "Un deporte",
-    "Algo que te haga reír",
-    "Algo que se use para limpiar"
-  ];
-}
-if (CONSIGNAS_ADULTO.length === 0) {
-  CONSIGNAS_ADULTO = [
-    "Una palabra prohibida",
-    "Algo que se hace a escondidas",
-    "Una excusa para salir",
-    "Un lugar ‘peligroso’",
-    "Algo que te da vergüenza decir"
-  ];
-}
+// ====== UI ======
+const btnIniciar = document.getElementById("btnIniciar");
+const btnRepetir = document.getElementById("btnRepetir");
+const btnTerminar = document.getElementById("btnTerminar");
+const btnFullscreen = document.getElementById("btnFullscreen");
+const btnAdulto = document.getElementById("btnAdulto");
+const btnMusica = document.getElementById("btnMusica");
+
+const estado = document.getElementById("estado");
+const timerEl = document.getElementById("timer");
+const vistaLectura = document.getElementById("vistaLectura");
+const vistaRespuesta = document.getElementById("vistaRespuesta");
+const listaEl = document.getElementById("listaConsignas");
+
+const musicaFondo = document.getElementById("musicaFondo");
+
+// Slider volumen
+const musicVolume = document.getElementById("musicVolume");
+const musicVolumeLabel = document.getElementById("musicVolumeLabel");
+
+// Update banner (SW)
+const updateBanner = document.getElementById("updateBanner");
+const btnUpdateNow = document.getElementById("btnUpdateNow");
+
+// Sugerencias (modal)
+const btnSugerirAbrir = document.getElementById("btnSugerirAbrir");
+const modalSugerencia = document.getElementById("modalSugerencia");
+const btnSugerirCerrar = document.getElementById("btnSugerirCerrar");
+const inputSugerencia = document.getElementById("inputSugerencia");
+const selectCategoria = document.getElementById("selectCategoria");
+const btnEnviarSugerencia = document.getElementById("btnEnviarSugerencia");
+const sugerenciaMsg = document.getElementById("sugerenciaMsg");
 
 // ====== STATE ======
-let adultoON = false;
-let musicaON = false;
+let ronda = [];
+let ultimaRondaIDs = [];
+let timerId = null;
+let wakeLock = null;
 
-let rondaActiva = false;
-let listaActual = [];
-let ultimaLista = [];
-let mostrarLista = true; // si "Escuchá y mirá" está ON
+let modoAdultoActivo = false;
+let musicaActiva = false;
 
-// ====== DOM ======
-const $ = (sel) => document.querySelector(sel);
+let fadeInterval = null;
 
-const btnAdulto = $("#btnAdulto");
-const btnFullscreen = $("#btnFullscreen");
-const btnMusica = $("#btnMusica");
-const vol = $("#vol");
-const volLabel = $("#volLabel");
-const bgm = $("#bgm");
+// Playlist state
+let playlistIndex = Math.floor(Math.random() * PLAYLIST.length);
+let userGestureUnlocked = false;
 
-const btnIniciar = $("#btnIniciar");
-const btnRepetir = $("#btnRepetir");
-const btnSugerir = $("#btnSugerir");
-const btnMostrar = $("#btnMostrar");
-const btnTerminar = $("#btnTerminar");
+// ====== helpers ======
+function show(el){ if(el) el.classList.remove("hidden"); }
+function hide(el){ if(el) el.classList.add("hidden"); }
+function limpiarTexto(t){ return String(t || "").replace(/\s+/g," ").trim(); }
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
 
-const status = $("#status");
-const substatus = $("#substatus");
-const lista = $("#lista");
-
-// ====== INIT ======
-init();
-
-function init() {
-  // Música: recuerda ON/OFF
-  musicaON = localStorage.getItem("diezde_musica_on") === "1";
-  setMusicaUI(musicaON);
-
-  // ✅ Volumen SIEMPRE 15% al cargar
-  setVolume(DEFAULT_VOL);
-
-  // Botones
-  btnIniciar.addEventListener("click", iniciarRonda);
-  btnRepetir.addEventListener("click", repetirConsignas);
-  btnSugerir.addEventListener("click", sugerirConsigna);
-  btnMostrar.addEventListener("click", toggleMostrar);
-  btnTerminar.addEventListener("click", terminarAhora);
-
-  btnAdulto.addEventListener("click", toggleAdultoPIN);
-  btnFullscreen.addEventListener("click", toggleFullscreen);
-  btnMusica.addEventListener("click", toggleMusica);
-
-  vol.addEventListener("input", () => {
-    const v = clamp(parseInt(vol.value, 10) / 100, 0, 1);
-    bgm.volume = v;
-    volLabel.textContent = `${Math.round(v * 100)}%`;
-  });
-
-  // Estado inicial UI
-  setStatus("Listos para jugar", "Escuchá…");
-  renderLista([]);
-  setGameButtons(false);
-
-  // Si música estaba ON, la prendemos con fade al entrar
-  if (musicaON) {
-    playMusicWithFadeIn();
+function shuffle(arr){
+  const a = [...arr];
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
   }
+  return a;
 }
 
-// ====== UI HELPERS ======
-function setStatus(line1, line2) {
-  status.textContent = line1;
-  substatus.textContent = line2;
+function cancelarVoz(){
+  try{ if("speechSynthesis" in window) speechSynthesis.cancel(); }catch(e){}
 }
 
-function setGameButtons(active) {
-  btnRepetir.disabled = !active;
-  btnSugerir.disabled = !active;
-  btnTerminar.disabled = !active;
-  btnMostrar.disabled = !active;
-}
-
-function renderLista(items) {
-  lista.innerHTML = "";
-  if (!items || items.length === 0) return;
-
-  items.forEach((t) => {
-    const li = document.createElement("li");
-    li.textContent = t;
-    lista.appendChild(li);
-  });
-}
-
-function toggleMostrar() {
-  mostrarLista = !mostrarLista;
-  btnMostrar.classList.toggle("on", mostrarLista);
-  btnMostrar.textContent = mostrarLista ? "👀 Escuchá y mirá" : "🙈 Solo escuchá";
-
-  // si hay ronda, refrescamos
-  if (rondaActiva) {
-    renderLista(mostrarLista ? listaActual : []);
-  }
-}
-
-function setMusicaUI(on) {
-  btnMusica.classList.toggle("on", on);
-  btnMusica.innerHTML = on ? "🎵 <span>Música</span>" : "🎵 <span>Música</span>";
-}
-
-function setAdultoUI(on) {
-  btnAdulto.classList.toggle("on", on);
-}
-
-// ====== VOLUME ======
-function setVolume(v) {
-  const vv = clamp(v, 0, 1);
-  bgm.volume = vv;
-  vol.value = String(Math.round(vv * 100));
-  volLabel.textContent = `${Math.round(vv * 100)}%`;
-}
-
-// ====== ROUND ======
-async function iniciarRonda() {
-  if (rondaActiva) return;
-
-  rondaActiva = true;
-  btnIniciar.disabled = true;
-  setGameButtons(true);
-
-  setStatus("Ronda en curso", "Prepará lápiz y hoja…");
-  await sleep(250);
-
-  // Elegimos 10 consignas
-  listaActual = elegirDiez();
-  ultimaLista = [...listaActual];
-
-  // Mostramos o escondemos según modo
-  renderLista(mostrarLista ? listaActual : []);
-
-  // Leemos en voz
-  await leerLista(listaActual);
-
-  setStatus("¡Tiempo!", "Podés repetir o sugerir.");
-  btnIniciar.disabled = false;
-}
-
-async function repetirConsignas() {
-  if (!rondaActiva || ultimaLista.length === 0) return;
-  setStatus("Repasando", "Escuchá…");
-  await leerLista(ultimaLista, true);
-  setStatus("Listo", "Podés sugerir otra o iniciar otra ronda.");
-}
-
-async function sugerirConsigna() {
-  // JSONP: trae una sugerencia aprobada desde tu Apps Script
-  setStatus("Buscando sugerencia…", "Un segundo…");
-
-  try {
-    const sug = await jsonpFetch(`${SUGERENCIAS_API_URL}?action=random&adulto=${adultoON ? "1" : "0"}`);
-    const texto = (sug && (sug.texto || sug.sugerencia || sug.text)) ? String(sug.texto || sug.sugerencia || sug.text) : "";
-
-    if (!texto) throw new Error("Sin texto en respuesta");
-
-    // reemplaza una al azar
-    if (!listaActual || listaActual.length !== 10) listaActual = elegirDiez();
-
-    const idx = randInt(0, 9);
-    listaActual[idx] = texto;
-
-    ultimaLista = [...listaActual];
-    renderLista(mostrarLista ? listaActual : []);
-
-    setStatus("Sugerencia lista", "La leemos al final.");
-    await speak(`Sugerencia: ${texto}`);
-
-    setStatus("Ok", "Podés repetir o iniciar otra ronda.");
-  } catch (e) {
-    console.log(e);
-    setStatus("No se pudo traer sugerencia", "Revisá tu /exec o internet.");
-    await sleep(900);
-    setStatus("Listos para jugar", "Probá de nuevo cuando quieras.");
-  }
-}
-
-function terminarAhora() {
-  if (!rondaActiva) return;
-  rondaActiva = false;
-  btnIniciar.disabled = false;
-  setGameButtons(false);
-
-  // mostramos lista final para corregir
-  renderLista(listaActual);
-
-  setStatus("Ronda terminada", "Podés iniciar otra cuando quieras.");
-}
-
-// ====== PICKING LOGIC ======
-function elegirDiez() {
-  const poolGeneral = shuffle([...CONSIGNAS_GENERALES]);
-
-  // Evitar repetir cosas de la ronda anterior (en lo posible)
-  const prev = new Set(ultimaLista.map((x) => String(x).toLowerCase().trim()));
-
-  let selected = [];
-  for (const item of poolGeneral) {
-    const norm = String(item).toLowerCase().trim();
-    if (!prev.has(norm)) selected.push(item);
-    if (selected.length === 10) break;
-  }
-
-  // si no alcanza, completamos sin filtro
-  if (selected.length < 10) {
-    for (const item of poolGeneral) {
-      selected.push(item);
-      if (selected.length === 10) break;
-    }
-  }
-
-  // ✅ 1 adulta por ronda si adultoON
-  if (adultoON && CONSIGNAS_ADULTO.length > 0) {
-    const adulta = CONSIGNAS_ADULTO[randInt(0, CONSIGNAS_ADULTO.length - 1)];
-    const pos = randInt(0, 9);
-    selected[pos] = adulta;
-  }
-
-  return selected.slice(0, 10);
-}
-
-// ====== VOICE ======
-async function leerLista(items, esRepaso = false) {
-  // Cancela lectura anterior
-  window.speechSynthesis?.cancel?.();
-
-  const intro = esRepaso ? "Repaso." : "Arranca la ronda.";
-  await speak(intro);
-  await sleep(200);
-
-  for (let i = 0; i < items.length; i++) {
-    const n = i + 1;
-    const t = String(items[i]);
-    await speak(`${n}. ${t}`);
-    await sleep(PAUSA_LECTURA_MS);
-  }
-
-  await sleep(PAUSA_REPASO_MS);
-}
-
-function speak(text) {
-  return new Promise((resolve) => {
-    if (!("speechSynthesis" in window)) return resolve();
-
-    const u = new SpeechSynthesisUtterance(text);
+function hablar(texto){
+  return new Promise(res=>{
+    if(!("speechSynthesis" in window)){ res(); return; }
+    const u = new SpeechSynthesisUtterance(limpiarTexto(texto));
     u.lang = "es-AR";
-    u.rate = 1.02;
-    u.pitch = 1.0;
-
-    u.onend = () => resolve();
-    u.onerror = () => resolve();
-
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(u);
+    u.rate = 1;
+    u.volume = 1; // ✅ VOZ SIEMPRE 100%
+    u.onend = res;
+    u.onerror = res;
+    speechSynthesis.speak(u);
   });
 }
 
-// ====== ADULTO (PIN) ======
-function toggleAdultoPIN() {
-  if (adultoON) {
-    adultoON = false;
-    setAdultoUI(false);
-    setStatus("Modo Adulto", "Desactivado.");
+function renderLectura(items){
+  if(!listaEl) return;
+  listaEl.innerHTML = "";
+  items.forEach(c=>{
+    const li = document.createElement("li");
+    li.textContent = c.texto; // ✅ tus consignas son objetos
+    listaEl.appendChild(li);
+  });
+}
+
+// ====== WakeLock ======
+async function activarWakeLock(){
+  try{
+    if("wakeLock" in navigator){
+      wakeLock = await navigator.wakeLock.request("screen");
+    }
+  }catch(e){}
+}
+function liberarWakeLock(){
+  try{
+    if(wakeLock){
+      wakeLock.release();
+      wakeLock = null;
+    }
+  }catch(e){}
+}
+
+// ====== Fullscreen ======
+async function toggleFullscreen(){
+  try{
+    if(!document.fullscreenElement){
+      await document.documentElement.requestFullscreen();
+    }else{
+      await document.exitFullscreen();
+    }
+  }catch(e){}
+}
+function setBtnFullscreenUI(){
+  if(!btnFullscreen) return;
+  const enFS = !!document.fullscreenElement;
+  btnFullscreen.textContent = enFS ? "Salir Fullscreen" : "Fullscreen";
+}
+
+// ====== Música (playlist) + fade + recuerda estado + volumen ======
+function setBtnMusicaUI(){
+  if(!btnMusica) return;
+  btnMusica.setAttribute("aria-pressed", musicaActiva ? "true" : "false");
+  btnMusica.textContent = musicaActiva ? "🔊 Música" : "🎵 Música";
+}
+
+function setMusicVol(vol){
+  const v = clamp(vol, 0, 1);
+  if(musicaFondo) musicaFondo.volume = v;
+
+  if(musicVolume) musicVolume.value = String(Math.round(v * 100));
+  if(musicVolumeLabel) musicVolumeLabel.textContent = `${Math.round(v * 100)}%`;
+}
+
+function getUIVol(){
+  const v = Number(musicVolume?.value ?? 15) / 100;
+  return clamp(v, 0, 1);
+}
+
+function setTrack(i){
+  if(!musicaFondo) return;
+  playlistIndex = (i + PLAYLIST.length) % PLAYLIST.length;
+  musicaFondo.src = PLAYLIST[playlistIndex];
+}
+
+function fadeTo(target, ms = 350){
+  if(!musicaFondo) return;
+  clearInterval(fadeInterval);
+
+  const start = typeof musicaFondo.volume === "number" ? musicaFondo.volume : 0;
+  const steps = 18;
+  const stepMs = Math.max(12, Math.floor(ms / steps));
+  let i = 0;
+
+  fadeInterval = setInterval(()=>{
+    i++;
+    const v = start + (target - start) * (i / steps);
+    musicaFondo.volume = clamp(v, 0, 1);
+
+    if(i >= steps){
+      clearInterval(fadeInterval);
+      fadeInterval = null;
+      if(target === 0) musicaFondo.pause();
+    }
+  }, stepMs);
+}
+
+function playMusica(){
+  if(!musicaFondo) return;
+  if(!userGestureUnlocked) return;
+
+  if(!musicaFondo.src) setTrack(playlistIndex);
+
+  musicaFondo.volume = 0;
+  musicaFondo.play().catch(()=>{});
+  fadeTo(getUIVol(), 450);
+}
+
+function pauseMusica(){
+  if(!musicaFondo) return;
+  fadeTo(0, 250);
+}
+
+function toggleMusica(){
+  musicaActiva = !musicaActiva;
+  localStorage.setItem(MUSIC_ON_KEY, musicaActiva ? "1" : "0");
+  setBtnMusicaUI();
+  if(musicaActiva) playMusica();
+  else pauseMusica();
+}
+
+function restoreMusicaPref(){
+  musicaActiva = localStorage.getItem(MUSIC_ON_KEY) === "1";
+  setBtnMusicaUI();
+
+  // ✅ VOL SIEMPRE 15% al cargar
+  setMusicVol(DEFAULT_MUSIC_VOL);
+
+  if(musicaFondo){
+    setTrack(playlistIndex);
+    musicaFondo.loop = false;
+
+    musicaFondo.addEventListener("ended", ()=>{
+      setTrack(playlistIndex + 1);
+      if(musicaActiva) playMusica();
+    });
+  }
+}
+
+// ====== Modo Adulto con PIN ======
+function setAdultoUI(){
+  if(!btnAdulto) return;
+  btnAdulto.setAttribute("aria-pressed", modoAdultoActivo ? "true" : "false");
+  btnAdulto.textContent = modoAdultoActivo ? "🔥 Adulto" : "🔒 Adulto";
+}
+function pedirPINyToggleAdulto(){
+  const pin = prompt("Ingresá PIN para Modo Adulto:");
+  if(pin === null) return;
+
+  if(pin.trim() === ADULTO_PIN){
+    modoAdultoActivo = !modoAdultoActivo;
+    setAdultoUI();
+    if(estado){
+      estado.textContent = modoAdultoActivo
+        ? "Modo Adulto ACTIVADO (1 por ronda)"
+        : "Modo Adulto DESACTIVADO";
+    }
+  }else{
+    if(estado) estado.textContent = "PIN incorrecto ❌";
+  }
+}
+
+// ====== Selección ronda ======
+function normalizarLista(base, categoria){
+  return (Array.isArray(base)? base : [])
+    .map(x => ({
+      id: Number(x.id),
+      texto: limpiarTexto(x.texto),
+      categoria
+    }))
+    .filter(x => x.id && x.texto.length > 0);
+}
+
+function seleccionarRonda(){
+  const generales = normalizarLista(CONSIGNAS_GENERALES, "GENERAL");
+  const adultas = normalizarLista(CONSIGNAS_ADULTO, "ADULTO");
+
+  const cantGeneral = modoAdultoActivo ? 9 : 10;
+  const cantAdulto = modoAdultoActivo ? 1 : 0;
+
+  let poolGeneral = generales.filter(c => !ultimaRondaIDs.includes(c.id));
+  if(poolGeneral.length < cantGeneral) poolGeneral = generales;
+
+  let seleccion = shuffle(poolGeneral).slice(0, cantGeneral);
+
+  if(cantAdulto === 1 && adultas.length > 0){
+    const una = shuffle(adultas).slice(0,1);
+    seleccion = [...seleccion, ...una];
+  }
+
+  seleccion = shuffle(seleccion);
+  ultimaRondaIDs = seleccion.map(c => c.id);
+  return seleccion;
+}
+
+// ====== Timer ======
+function detenerTimer(){
+  if(timerId){
+    clearInterval(timerId);
+    timerId = null;
+  }
+}
+
+function iniciarTimer(){
+  detenerTimer();
+  let t = TIEMPO_ESCRITURA;
+  if(timerEl) timerEl.textContent = t;
+
+  timerId = setInterval(()=>{
+    t--;
+    if(timerEl) timerEl.textContent = t;
+    if(t <= 0){
+      detenerTimer();
+      terminarRonda();
+    }
+  }, 1000);
+}
+
+// ====== Flujo ======
+async function iniciarRonda(){
+  if(!Array.isArray(CONSIGNAS_GENERALES) || CONSIGNAS_GENERALES.length < 10){
+    if(estado) estado.textContent = "Faltan consignas generales (revisá consignas.js)";
     return;
   }
 
-  const pin = prompt("Ingresá PIN para Modo Adulto:");
-  if (pin === null) return;
+  userGestureUnlocked = true;
 
-  if (String(pin).trim() === ADULTO_PIN) {
-    adultoON = true;
-    setAdultoUI(true);
-    setStatus("Modo Adulto", "Activado (1 por ronda).");
-  } else {
-    setStatus("PIN incorrecto", "Modo Adulto no se activó.");
+  cancelarVoz();
+  pauseMusica();
+
+  await activarWakeLock();
+
+  ronda = seleccionarRonda();
+  renderLectura(ronda);
+
+  show(vistaLectura);
+  hide(vistaRespuesta);
+
+  // ✅ Terminar visible solo cuando corresponde
+  show(btnTerminar);
+
+  if(estado) estado.textContent = "Escuchá…";
+
+  for(let i=0;i<ronda.length;i++){
+    await hablar(`${i+1}. ${ronda[i].texto}`);
+    await sleep(PAUSA_LECTURA_MS);
+  }
+
+  await hablar("Repasamos");
+  for(const c of ronda){
+    await hablar(c.texto);
+    await sleep(PAUSA_REPASO_MS);
+  }
+
+  hide(vistaLectura);
+  show(vistaRespuesta);
+
+  if(estado) estado.textContent = "¡A escribir de memoria!";
+  iniciarTimer();
+}
+
+function terminarRonda(){
+  detenerTimer();
+  cancelarVoz();
+
+  hide(vistaRespuesta);
+  show(vistaLectura);
+  renderLectura(ronda);
+
+  hide(btnTerminar);
+  if(estado) estado.textContent = "Tiempo – corrigen respuestas";
+
+  liberarWakeLock();
+
+  if(musicaActiva) playMusica();
+  hablar("Tiempo");
+}
+
+async function repetirConsignas(){
+  if(!ronda || ronda.length === 0) return;
+  cancelarVoz();
+  pauseMusica();
+
+  await hablar("Repasamos");
+  for(const c of ronda){
+    await hablar(c.texto); // ✅ sin números
+    await sleep(PAUSA_REPASO_MS);
   }
 }
 
-// ====== FULLSCREEN ======
-function toggleFullscreen() {
-  const doc = document;
-  const el = document.documentElement;
+// ====== JSONP (SIN CORS) ======
+function jsonp(url, timeoutMs = 9000){
+  return new Promise((resolve, reject)=>{
+    const cb = `cb_${Date.now()}_${Math.floor(Math.random()*99999)}`;
 
-  const isFs = doc.fullscreenElement || doc.webkitFullscreenElement;
-
-  if (!isFs) {
-    (el.requestFullscreen || el.webkitRequestFullscreen || (()=>Promise.resolve()))?.call(el);
-  } else {
-    (doc.exitFullscreen || doc.webkitExitFullscreen || (()=>Promise.resolve()))?.call(doc);
-  }
-}
-
-// ====== MUSIC ======
-async function toggleMusica() {
-  musicaON = !musicaON;
-  localStorage.setItem("diezde_musica_on", musicaON ? "1" : "0");
-  setMusicaUI(musicaON);
-
-  if (musicaON) {
-    await playMusicWithFadeIn();
-    setStatus("Música", "Activada.");
-  } else {
-    await fadeOutAndPause();
-    setStatus("Música", "Desactivada.");
-  }
-}
-
-async function playMusicWithFadeIn() {
-  try {
-    // ✅ cada carga arranca en 15% igualmente
-    setVolume(DEFAULT_VOL);
-
-    // en móviles, play puede fallar hasta interacción: acá ya hubo click
-    await bgm.play();
-
-    // fade in desde 0 hasta el volumen actual (DEFAULT_VOL o slider)
-    const target = clamp(parseInt(vol.value, 10) / 100, 0, 1);
-    bgm.volume = 0;
-    await fadeVolume(0, target, 450);
-  } catch (e) {
-    console.log("No se pudo reproducir música:", e);
-  }
-}
-
-async function fadeOutAndPause() {
-  try {
-    const current = clamp(bgm.volume, 0, 1);
-    await fadeVolume(current, 0, 350);
-    bgm.pause();
-  } catch (e) {
-    // nada
-  }
-}
-
-function fadeVolume(from, to, ms) {
-  return new Promise((resolve) => {
-    const steps = 18;
-    const stepMs = Math.max(10, Math.floor(ms / steps));
-    let i = 0;
-
-    const tick = () => {
-      i++;
-      const t = i / steps;
-      const v = from + (to - from) * t;
-      bgm.volume = clamp(v, 0, 1);
-      if (i >= steps) return resolve();
-      setTimeout(tick, stepMs);
+    const cleanup = ()=>{
+      try{ delete window[cb]; }catch(e){}
+      if(script && script.parentNode) script.parentNode.removeChild(script);
+      clearTimeout(to);
     };
 
-    tick();
-  });
-}
-
-// ====== JSONP ======
-function jsonpFetch(url) {
-  return new Promise((resolve, reject) => {
-    const cbName = "cb_" + Math.random().toString(16).slice(2);
-
-    const script = document.createElement("script");
-    const sep = url.includes("?") ? "&" : "?";
-    script.src = `${url}${sep}callback=${cbName}`;
-
-    const timeout = setTimeout(() => {
-      cleanup();
-      reject(new Error("JSONP timeout"));
-    }, 9000);
-
-    window[cbName] = (data) => {
+    window[cb] = (data)=>{
       cleanup();
       resolve(data);
     };
 
-    script.onerror = () => {
+    const script = document.createElement("script");
+    script.src = url + (url.includes("?") ? "&" : "?") + "callback=" + encodeURIComponent(cb);
+    script.onerror = ()=>{
       cleanup();
-      reject(new Error("JSONP error"));
+      reject(new Error("jsonp_error"));
     };
 
-    function cleanup() {
-      clearTimeout(timeout);
-      delete window[cbName];
-      script.remove();
-    }
+    const to = setTimeout(()=>{
+      cleanup();
+      reject(new Error("jsonp_timeout"));
+    }, timeoutMs);
 
-    document.body.appendChild(script);
+    document.head.appendChild(script);
   });
 }
 
-// ====== UTILS ======
-function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
-function randInt(min, max){ return Math.floor(Math.random()*(max-min+1))+min; }
-function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
-function shuffle(arr){
-  for (let i = arr.length - 1; i > 0; i--){
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
+// ====== Sugerencias ======
+function abrirSugerencias(){
+  if(!modalSugerencia) return;
+  if(inputSugerencia) inputSugerencia.value = "";
+  if(selectCategoria) selectCategoria.value = "GENERAL";
+  if(sugerenciaMsg) { sugerenciaMsg.classList.add("hidden"); sugerenciaMsg.textContent=""; }
+  show(modalSugerencia);
+  setTimeout(()=>{ try{ inputSugerencia?.focus(); }catch(e){} }, 50);
 }
+
+function cerrarSugerencias(){ hide(modalSugerencia); }
+
+function msgSugerencia(texto, tipo=""){
+  if(!sugerenciaMsg) return;
+  sugerenciaMsg.textContent = texto;
+  sugerenciaMsg.classList.remove("hidden");
+  sugerenciaMsg.classList.remove("ok","err");
+  if(tipo) sugerenciaMsg.classList.add(tipo);
+}
+
+async function enviarSugerencia(){
+  const texto = limpiarTexto(inputSugerencia?.value);
+  const categoria = (selectCategoria?.value || "GENERAL").toUpperCase();
+
+  if(texto.length < 4){
+    msgSugerencia("Escribí una consigna un poquito más larga 🙂","err");
+    return;
+  }
+
+  if(!SUGERENCIAS_API_URL || SUGERENCIAS_API_URL.includes("PEGAR_ACA")){
+    msgSugerencia("Falta configurar la URL de sugerencias (Apps Script).","err");
+    return;
+  }
+
+  msgSugerencia("Enviando…");
+
+  const url =
+    `${SUGERENCIAS_API_URL}?action=sugerir` +
+    `&texto=${encodeURIComponent(texto)}` +
+    `&categoria=${encodeURIComponent(categoria)}`;
+
+  try{
+    const data = await jsonp(url);
+    if(data && data.ok){
+      msgSugerencia("¡Gracias por la sugerencia! 🙌 La vamos a revisar.","ok");
+      if(inputSugerencia) inputSugerencia.value = "";
+    }else{
+      msgSugerencia("No se pudo enviar. Probá otra vez.","err");
+    }
+  }catch(e){
+    msgSugerencia("Error de conexión. Probá otra vez.","err");
+  }
+}
+
+// ====== Cargar aprobadas ======
+async function cargarAprobadas(){
+  if(!SUGERENCIAS_API_URL || SUGERENCIAS_API_URL.includes("PEGAR_ACA")) return;
+
+  try{
+    const urlG = `${SUGERENCIAS_API_URL}?action=aprobadas&cat=GENERAL`;
+    const urlA = `${SUGERENCIAS_API_URL}?action=aprobadas&cat=ADULTO`;
+
+    const [g,a] = await Promise.all([
+      jsonp(urlG).catch(()=>[]),
+      jsonp(urlA).catch(()=>[])
+    ]);
+
+    const baseG = new Map((CONSIGNAS_GENERALES||[]).map(x => [Number(x.id), x]));
+    (Array.isArray(g)?g:[]).forEach(x=>{
+      const id = Number(x.id);
+      const texto = limpiarTexto(x.texto);
+      if(id && texto && !baseG.has(id)) baseG.set(id, {id, texto});
+    });
+    CONSIGNAS_GENERALES = Array.from(baseG.values());
+
+    const baseA = new Map((CONSIGNAS_ADULTO||[]).map(x => [Number(x.id), x]));
+    (Array.isArray(a)?a:[]).forEach(x=>{
+      const id = Number(x.id);
+      const texto = limpiarTexto(x.texto);
+      if(id && texto && !baseA.has(id)) baseA.set(id, {id, texto});
+    });
+    CONSIGNAS_ADULTO = Array.from(baseA.values());
+
+  }catch(e){}
+}
+
+// ====== UPDATE BANNER (SW) ======
+let newSW = null;
+function showUpdateBanner(){
+  if(!updateBanner || !btnUpdateNow) return;
+  updateBanner.classList.remove("hidden");
+  btnUpdateNow.onclick = () => {
+    if (newSW) newSW.postMessage({ type: "SKIP_WAITING" });
+    location.reload();
+  };
+}
+
+function initServiceWorker(){
+  if(!("serviceWorker" in navigator)) return;
+
+  window.addEventListener("load", async ()=>{
+    try{
+      const reg = await navigator.serviceWorker.register("./sw.js");
+
+      if(reg.waiting){
+        newSW = reg.waiting;
+        showUpdateBanner();
+      }
+
+      reg.addEventListener("updatefound", ()=>{
+        const sw = reg.installing;
+        if(!sw) return;
+
+        sw.addEventListener("statechange", ()=>{
+          if(sw.state === "installed" && navigator.serviceWorker.controller){
+            newSW = sw;
+            showUpdateBanner();
+          }
+        });
+      });
+
+      setInterval(()=> reg.update(), 5*60*1000);
+
+    }catch(e){}
+  });
+}
+
+// ====== INIT ======
+(function init(){
+  if(timerEl) timerEl.textContent = TIEMPO_ESCRITURA;
+
+  setAdultoUI();
+  setBtnFullscreenUI();
+  restoreMusicaPref();
+  setBtnMusicaUI();
+
+  // volumen: siempre 15 al cargar, pero el usuario puede moverlo
+  if(musicVolume){
+    musicVolume.value = String(Math.round(DEFAULT_MUSIC_VOL * 100));
+    if(musicVolumeLabel) musicVolumeLabel.textContent = `${musicVolume.value}%`;
+
+    musicVolume.addEventListener("input", ()=>{
+      const v = clamp(Number(musicVolume.value)/100, 0, 1);
+      setMusicVol(v);
+    });
+  }
+
+  cargarAprobadas();
+
+  modalSugerencia?.addEventListener("click", (ev)=>{
+    if(ev.target === modalSugerencia) cerrarSugerencias();
+  });
+
+  initServiceWorker();
+})();
+
+// ====== EVENTS ======
+btnIniciar?.addEventListener("click", iniciarRonda);
+btnRepetir?.addEventListener("click", repetirConsignas);
+btnTerminar?.addEventListener("click", terminarRonda);
+
+btnAdulto?.addEventListener("click", pedirPINyToggleAdulto);
+
+btnFullscreen?.addEventListener("click", toggleFullscreen);
+document.addEventListener("fullscreenchange", setBtnFullscreenUI);
+
+btnMusica?.addEventListener("click", ()=>{
+  userGestureUnlocked = true;
+  toggleMusica();
+});
+
+document.addEventListener("click", ()=>{
+  userGestureUnlocked = true;
+  if(musicaActiva && musicaFondo && musicaFondo.paused){
+    playMusica();
+  }
+},{ once:true });
+
+btnSugerirAbrir?.addEventListener("click", abrirSugerencias);
+btnSugerirCerrar?.addEventListener("click", cerrarSugerencias);
+btnEnviarSugerencia?.addEventListener("click", enviarSugerencia);
