@@ -268,3 +268,17 @@ ol li{margin:8px 0; color:#d8e8f2; line-height:1.25;}
   .brand h1{font-size: 28px;}
   .volbox input[type="range"]{width: 110px;}
 }
+
+.footer-badge{
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.footer-badge:hover{
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.footer-badge:active{
+  transform: translateY(0px);
+}
