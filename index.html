@@ -5,12 +5,11 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Diez De</title>
 
-  <!-- ✅ CSS -->
-  <link rel="stylesheet" href="style.css?v=2026-02-06-1">
+  <link rel="stylesheet" href="style.css?v=2026-02-06-2">
 </head>
 <body>
 
-  <!-- ✅ Banner actualización (SW) -->
+  <!-- Banner actualización (SW) -->
   <div id="updateBanner" class="update-banner hidden">
     <div class="update-left">
       <span class="dot"></span>
@@ -20,10 +19,8 @@
   </div>
 
   <div class="wrap">
-    <!-- HEADER -->
     <header class="top">
       <div class="brand">
-        <!-- Logo simple (SVG inline) -->
         <span class="logo" aria-hidden="true">
           <svg viewBox="0 0 64 64" width="28" height="28">
             <rect x="10" y="10" width="44" height="44" rx="12" fill="rgba(255,255,255,.08)" stroke="rgba(255,255,255,.14)"/>
@@ -38,9 +35,8 @@
         <h1>Diez <span class="de">De</span></h1>
       </div>
 
-      <!-- MODO / MÚSICA (afuera del cuadro del juego) -->
+      <!-- Toolbar (solo fullscreen + música) -->
       <div class="toolbar">
-        <button id="btnAdulto" class="btn btn-dark" type="button">🔒 Adulto</button>
         <button id="btnFullscreen" class="btn btn-dark" type="button">Fullscreen</button>
 
         <button id="btnMusica" class="btn btn-dark" type="button">🎵 Música</button>
@@ -53,23 +49,22 @@
       </div>
     </header>
 
-    <!-- ✅ ACCIÓN PRINCIPAL ARRIBA -->
+    <!-- Acción principal arriba -->
     <section class="actionbar">
       <button id="btnIniciar" class="btn btn-green btn-start" type="button">Iniciar ronda</button>
     </section>
 
-    <!-- PANEL JUEGO -->
     <section class="panel">
       <div id="estado" class="status">Listos para jugar</div>
 
-      <!-- ✅ Controles del JUEGO (afuera del cuadro de consignas) -->
+      <!-- Controles del juego (afuera de la lista) -->
       <div class="game-controls">
         <button id="btnRepetir" class="btn btn-dark btn-sm" type="button">🔁 Repetir</button>
         <button id="btnSugerirAbrir" class="btn btn-dark btn-sm" type="button">💡 Sugerir</button>
         <button id="btnTerminar" class="btn btn-dark btn-sm danger hidden" type="button">⛔ Terminar ahora</button>
       </div>
 
-      <!-- ✅ Vista lista (solo lista, sin botones adentro) -->
+      <!-- Lista (solo consignas) -->
       <div id="vistaLectura" class="lista hidden">
         <div class="lista-title">
           <div class="pill">Escuchá y mirá 👀 🔊</div>
@@ -77,7 +72,7 @@
         <ol id="listaConsignas"></ol>
       </div>
 
-      <!-- ✅ Vista respuesta -->
+      <!-- Timer -->
       <div id="vistaRespuesta" class="respuesta hidden">
         <div class="timer-box">
           <div class="timer-label">Tiempo</div>
@@ -91,10 +86,10 @@
       </a>
     </section>
 
-    <!-- ✅ Audio (música fondo) - playlist controlada por JS -->
+    <!-- Audio -->
     <audio id="musicaFondo" preload="auto"></audio>
 
-    <!-- ✅ Modal sugerencias -->
+    <!-- Modal sugerencias -->
     <div id="modalSugerencia" class="modal hidden">
       <div class="modal-card">
         <div class="modal-head">
@@ -114,7 +109,6 @@
             <option value="LUGAR">Lugar</option>
             <option value="PERSONAJE">Personaje</option>
             <option value="OTRO">Otro</option>
-            <option value="ADULTO">Adulto</option>
           </select>
 
           <p class="help">
@@ -130,8 +124,8 @@
       </div>
     </div>
 
-    <script src="consignas.js?v=2026-02-06-1"></script>
-    <script src="app.js?v=2026-02-06-1"></script>
+    <script src="consignas.js?v=2026-02-06-2"></script>
+    <script src="app.js?v=2026-02-06-2"></script>
   </div>
 </body>
 </html>
